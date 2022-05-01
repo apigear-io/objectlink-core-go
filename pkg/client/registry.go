@@ -1,32 +1,26 @@
 package client
 
-import "olink/pkg/core"
+type SinkToClientEntry struct {
+	sink IObjectSink
+	node *Node
+}
 
-var registry *ClientRegistry
-
-type ClientRegistry struct {
+type Registry struct {
 	entries map[string]*SinkToClientEntry
 }
 
-func NewClientRegistry() *ClientRegistry {
-	return &ClientRegistry{
+func NewRegistry() *Registry {
+	return &Registry{
 		entries: make(map[string]*SinkToClientEntry),
 	}
 }
 
-func GetRegistry() *ClientRegistry {
-	if registry == nil {
-		registry = NewClientRegistry()
-	}
-	return registry
-}
-
 // attach client node to registry
-func (registry *ClientRegistry) AttachClientNode(node *ClientNode) {
+func (registry *Registry) AttachClientNode(node *Node) {
 }
 
 // detach client node from registry
-func (registry *ClientRegistry) DetachClientNode(node *ClientNode) {
+func (registry *Registry) DetachClientNode(node *Node) {
 	for _, v := range registry.entries {
 		if v.node == node {
 			v.node = nil
@@ -34,45 +28,43 @@ func (registry *ClientRegistry) DetachClientNode(node *ClientNode) {
 	}
 }
 
-func (r *ClientRegistry) LinkClientNode(name string, node *ClientNode) {
-	r.Entry(name).node = node
+func (r *Registry) LinkClientNode(objectId string, node *Node) {
+	r.Entry(objectId).node = node
 }
 
-func (r *ClientRegistry) UnlinkClientNode(name string) {
-	r.Entry(name).node = nil
+func (r *Registry) UnlinkClientNode(objectId string) {
+	r.Entry(objectId).node = nil
 }
 
-func (r *ClientRegistry) AddObjectSink(sink IObjectSink) {
-	r.Entry(sink.ObjectName()).sink = sink
+func (r *Registry) AddObjectSink(sink IObjectSink) {
+	r.Entry(sink.ObjectId()).sink = sink
 }
 
 // remove object sink from registry
-func (registry *ClientRegistry) RemoveObjectSink(sink IObjectSink) {
-	name := sink.ObjectName()
-	registry.RemoveEntry(name)
+func (registry *Registry) RemoveObjectSink(sink IObjectSink) {
+	objectId := sink.ObjectId()
+	registry.RemoveEntry(objectId)
 }
 
 // get object sink by name
-func (r *ClientRegistry) GetObjectSink(name string) IObjectSink {
-	return r.Entry(name).sink
+func (r *Registry) GetObjectSink(objectId string) IObjectSink {
+	return r.Entry(objectId).sink
 }
 
-func (r *ClientRegistry) GetClientNode(name string) *ClientNode {
-	return r.Entry(name).node
+func (r *Registry) GetClientNode(objectId string) *Node {
+	return r.Entry(objectId).node
 }
 
-func (r *ClientRegistry) Entry(name string) *SinkToClientEntry {
-	resource := core.ResourceFromName(name)
-	if r.entries[resource] == nil {
-		r.entries[resource] = &SinkToClientEntry{
+func (r *Registry) Entry(objectId string) *SinkToClientEntry {
+	if r.entries[objectId] == nil {
+		r.entries[objectId] = &SinkToClientEntry{
 			node: nil,
 			sink: nil,
 		}
 	}
-	return r.entries[resource]
+	return r.entries[objectId]
 }
 
-func (r *ClientRegistry) RemoveEntry(name string) {
-	resource := core.ResourceFromName(name)
-	delete(r.entries, resource)
+func (r *Registry) RemoveEntry(objectId string) {
+	delete(r.entries, objectId)
 }
