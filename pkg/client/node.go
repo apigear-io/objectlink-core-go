@@ -57,7 +57,7 @@ func (c *Node) HandleMessage(data []byte) error {
 	case core.MsgInit:
 		// get the sink and call the on init method
 		name, props := msg.AsInit()
-		sink := c.GetObjectSink(name)
+		sink := c.Registry.GetObjectSink(name)
 		if sink == nil {
 			return fmt.Errorf("no sink for %s", name)
 		}
@@ -66,7 +66,7 @@ func (c *Node) HandleMessage(data []byte) error {
 	case core.MsgPropertyChange:
 		// get the sink and call the on property change method
 		res, value := msg.AsPropertyChange()
-		sink := c.GetObjectSink(res.ObjectId())
+		sink := c.Registry.GetObjectSink(res.ObjectId())
 		if sink == nil {
 			return fmt.Errorf("no sink for %s", res)
 		}
@@ -83,7 +83,7 @@ func (c *Node) HandleMessage(data []byte) error {
 	case core.MsgSignal:
 		// get the sink and call the on signal method
 		res, args := msg.AsSignal()
-		sink := c.GetObjectSink(res.ObjectId())
+		sink := c.Registry.GetObjectSink(res.ObjectId())
 		if sink == nil {
 			return fmt.Errorf("no sink for %s", res)
 		}
@@ -109,32 +109,10 @@ func (c *Node) SetRemoteProperty(res core.Resource, value core.Any) {
 	c.WriteMessage(core.CreateSetPropertyMessage(res, value))
 }
 
-func (c *Node) LinkNode(objectId string) {
-	c.Registry.LinkClientNode(objectId, c)
-}
-
-func (c *Node) UnlinkNode(name string) {
-	c.Registry.UnlinkClientNode(name)
-}
-
-func (c *Node) AddObjectSink(sink IObjectSink) {
-	c.Registry.AddObjectSink(sink)
-}
-
-func (c *Node) RemoveObjectSink(sink IObjectSink) {
-	c.Registry.RemoveObjectSink(sink)
-}
-
-func (c *Node) GetObjectSink(name string) IObjectSink {
-	return c.Registry.GetObjectSink(name)
-}
-
 func (c *Node) LinkRemoteNode(name string) {
-	c.LinkNode(name)
 	c.WriteMessage(core.CreateLinkMessage(name))
 }
 
 func (c *Node) UnlinkRemoteNode(name string) {
-	c.UnlinkNode(name)
 	c.WriteMessage(core.CreateUnlinkMessage(name))
 }
