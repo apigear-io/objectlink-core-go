@@ -115,7 +115,7 @@ func TestHandleInit(t *testing.T) {
 	node, sink, _ := makeNodeAndSink(t)
 	node.Registry.AddObjectSink(sink)
 	node.Registry.LinkClientNode(sink.ObjectId(), node)
-	msg := core.CreateInitMessage(sink.ObjectId(), core.Props{})
+	msg := core.CreateInitMessage(sink.ObjectId(), core.KWArgs{})
 	data, err := json.Marshal(msg)
 	assert.Nil(t, err, "should be nil")
 	node.HandleMessage(data)

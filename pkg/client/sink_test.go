@@ -25,7 +25,7 @@ func (s *CounterSink) OnPropertyChange(res core.Resource, value core.Any) {
 	}
 }
 
-func (s *CounterSink) OnInit(objectId string, props core.Props, node *Node) {
+func (s *CounterSink) OnInit(objectId string, props core.KWArgs, node *Node) {
 	s.events = append(s.events, core.CreateInitMessage(objectId, props))
 	_, ok := props["count"]
 	if ok {

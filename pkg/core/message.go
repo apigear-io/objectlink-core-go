@@ -16,7 +16,7 @@ const (
 )
 
 type Args []any
-type Props map[string]any
+type KWArgs map[string]any
 type Any any
 
 type Message []any
@@ -26,7 +26,7 @@ func (m Message) Type() MsgType {
 }
 
 // AsInit returns the name and props of the init message
-func (m Message) AsInit() (string, Props) {
+func (m Message) AsInit() (string, KWArgs) {
 	return AsString(m[1]), AsProps(m[2])
 }
 
@@ -76,7 +76,7 @@ func CreateLinkMessage(objectId string) Message {
 	}
 }
 
-func CreateInitMessage(objectId string, props Props) Message {
+func CreateInitMessage(objectId string, props KWArgs) Message {
 	return Message{
 		MsgInit,
 		objectId,

@@ -46,7 +46,7 @@ func AsAny(v Any) Any {
 	return v
 }
 
-func AsProps(v Any) Props {
+func AsProps(v Any) KWArgs {
 	switch v := v.(type) {
 	case map[string]any:
 		return v

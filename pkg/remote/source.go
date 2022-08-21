@@ -7,5 +7,5 @@ type IObjectSource interface {
 	Invoke(res core.Resource, args core.Args)
 	SetProperty(res core.Resource, value core.Any)
 	Linked(objectId string, node *Node)
-	CollectProperties() core.Props
+	CollectProperties() core.KWArgs
 }

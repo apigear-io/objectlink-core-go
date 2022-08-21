@@ -9,7 +9,7 @@ import (
 type Data struct {
 	ObjectId     string
 	Resource     Resource
-	Props        Props
+	Props        KWArgs
 	Value        interface{}
 	LastValue    interface{}
 	Args         Args

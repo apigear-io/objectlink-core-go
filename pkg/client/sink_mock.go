@@ -20,7 +20,7 @@ func (m *MockSink) OnPropertyChange(res core.Resource, value core.Any) {
 	m.events = append(m.events, core.CreatePropertyChangeMessage(res, value))
 }
 
-func (m *MockSink) OnInit(objectId string, props core.Props, node *Node) {
+func (m *MockSink) OnInit(objectId string, props core.KWArgs, node *Node) {
 	m.events = append(m.events, core.CreateInitMessage(objectId, props))
 }
 
