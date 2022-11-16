@@ -1,6 +1,9 @@
 package core
 
-import "encoding/json"
+import (
+	"bytes"
+	"encoding/json"
+)
 
 type MessageFormat int
 
@@ -18,18 +21,20 @@ type MessageConverter struct {
 func (c *MessageConverter) ToData(msg Message) ([]byte, error) {
 	switch c.Format {
 	case FormatJson:
-		b, err := json.Marshal(msg)
-		return b, err
+		data, err := json.Marshal(msg)
+		return data, err
 	}
 	return nil, nil
 }
 
-func (c *MessageConverter) FromData(msg []byte) (Message, error) {
+func (c *MessageConverter) FromData(data []byte) (Message, error) {
 	switch c.Format {
 	case FormatJson:
-		var m Message
-		err := json.Unmarshal(msg, &m)
-		return m, err
+		var msg Message
+		decoder := json.NewDecoder(bytes.NewReader(data))
+		decoder.UseNumber()
+		err := decoder.Decode(&msg)
+		return msg, err
 	}
 	return nil, nil
 }

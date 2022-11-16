@@ -11,11 +11,15 @@ func NewMockDataWriter() *MockDataWriter {
 	}
 }
 
-func (w *MockDataWriter) WriteData(data []byte) error {
+func (w *MockDataWriter) Write(data []byte) (int, error) {
 	msg, err := w.converter.FromData(data)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	w.Messages = append(w.Messages, msg)
+	return len(data), nil
+}
+
+func (w *MockDataWriter) Close() error {
 	return nil
 }

@@ -14,19 +14,19 @@ func (s *CounterSink) ObjectId() string {
 	return "demo.Counter"
 }
 
-func (s *CounterSink) OnSignal(res core.Resource, args core.Args) {
-	s.events = append(s.events, core.CreateSignalMessage(res, args))
+func (s *CounterSink) OnSignal(signalId string, args core.Args) {
+	s.events = append(s.events, core.MakeSignalMessage(signalId, args))
 }
 
-func (s *CounterSink) OnPropertyChange(res core.Resource, value core.Any) {
-	s.events = append(s.events, core.CreatePropertyChangeMessage(res, value))
-	if res.Member() == "Count" {
+func (s *CounterSink) OnPropertyChange(propertyId string, value core.Any) {
+	s.events = append(s.events, core.MakePropertyChangeMessage(propertyId, value))
+	if core.ToMember(propertyId) == "count" {
 		s.Count = value.(int)
 	}
 }
 
 func (s *CounterSink) OnInit(objectId string, props core.KWArgs, node *Node) {
-	s.events = append(s.events, core.CreateInitMessage(objectId, props))
+	s.events = append(s.events, core.MakeInitMessage(objectId, props))
 	_, ok := props["count"]
 	if ok {
 		s.Count = props["count"].(int)
@@ -39,7 +39,8 @@ func TestCounterSink(t *testing.T) {
 	sink := &CounterSink{}
 	writer := core.NewMockDataWriter()
 	registry := NewRegistry()
-	node := NewNode(registry, writer)
+	node := NewNode(registry)
+	node.SetOutput(writer)
 
 	// link node to sink object id
 	// registry.LinkClientNode(sink.ObjectId(), node)
@@ -49,6 +50,6 @@ func TestCounterSink(t *testing.T) {
 	registry.AddObjectSink(sink)
 	// subscribe to remote source events
 	node.LinkRemoteNode(sink.ObjectId())
-	res := core.CreateResource(sink.ObjectId(), "count")
+	res := core.MakeIdentifier(sink.ObjectId(), "count")
 	node.SetRemoteProperty(res, 0)
 }

@@ -2,117 +2,154 @@ package client
 
 import (
 	"fmt"
-	"log"
+	"io"
+	"olink/log"
 	"olink/pkg/core"
 )
 
-type InvokeReplyArg struct {
-	resource core.Resource
-	value    core.Any
+var nodeId = 0
+
+func nextNodeId() string {
+	nodeId++
+	return fmt.Sprintf("n%d", nodeId)
 }
 
-type InvokeReplyFunc func(args InvokeReplyArg)
+type InvokeReplyArg struct {
+	Identifier string
+	Value      core.Any
+}
+
+type InvokeReplyFunc func(arg InvokeReplyArg)
 
 type Node struct {
-	Registry  *Registry
-	pending   map[int]InvokeReplyFunc
-	seqId     int
-	converter core.MessageConverter
-	writer    core.DataWriter
+	id       string
+	Registry *Registry
+	pending  map[int64]InvokeReplyFunc
+	seqId    int64
+	conv     core.MessageConverter
+	output   io.WriteCloser
 }
 
-func NewNode(registry *Registry, writer core.DataWriter) *Node {
+func NewNode(registry *Registry) *Node {
 	return &Node{
+		id:       nextNodeId(),
 		Registry: registry,
-		pending:  make(map[int]InvokeReplyFunc),
+		pending:  make(map[int64]InvokeReplyFunc),
 		seqId:    0,
-		converter: core.MessageConverter{
+		conv: core.MessageConverter{
 			Format: core.FormatJson,
 		},
-		writer: writer,
 	}
 }
 
-func (node *Node) WriteMessage(msg core.Message) {
-	data, err := node.converter.ToData(msg)
-	if err != nil {
-		fmt.Printf("error converting message")
+func (n *Node) Id() string {
+	return n.id
+}
+
+func (n *Node) Close() error {
+	log.Infof("%s close\n", n.Id())
+	n.Registry.DetachClientNode(n)
+	return nil
+}
+
+func (n *Node) SetOutput(out io.WriteCloser) {
+	n.output = out
+}
+
+func (n *Node) SendMessage(msg core.Message) {
+	log.Infof("%s -> %v", n.Id(), msg)
+	if n.output == nil {
+		log.Warnf("node: no input")
 		return
 	}
-	err = node.writer.WriteData(data)
+	data, err := n.conv.ToData(msg)
 	if err != nil {
-		fmt.Printf("error writing message")
+		log.Warnf("error converting message")
+		return
+	}
+	if n.output == nil {
+		log.Warnf("no input set")
+		return
+	}
+	_, err = n.output.Write(data)
+	if err != nil {
+		log.Warnf("error writing message: %v", err)
 		return
 	}
 }
 
-// HandleMessage handles a message from the source.
+// Write handles a message from the source.
 // We handle init, property change, invoke reply, signal messages.
-func (c *Node) HandleMessage(data []byte) error {
-	msg, err := c.converter.FromData(data)
+func (n *Node) Write(data []byte) (int, error) {
+	msg, err := n.conv.FromData(data)
+	log.Infof("%s <- %v", n.Id(), msg)
 	if err != nil {
-		return err
+		return 0, err
 	}
 	switch msg.Type() {
 	case core.MsgInit:
 		// get the sink and call the on init method
-		name, props := msg.AsInit()
-		sink := c.Registry.GetObjectSink(name)
+		objectId, props := msg.AsInit()
+		sink := n.Registry.ObjectSink(objectId)
 		if sink == nil {
-			return fmt.Errorf("no sink for %s", name)
+			return 0, fmt.Errorf("no sink for %s", objectId)
 		}
-		sink.OnInit(name, props, c)
-		return nil
+		sink.OnInit(objectId, props, n)
+		return 0, nil
 	case core.MsgPropertyChange:
 		// get the sink and call the on property change method
-		res, value := msg.AsPropertyChange()
-		sink := c.Registry.GetObjectSink(res.ObjectId())
+		propertyId, value := msg.AsPropertyChange()
+		objectId := core.ToObjectId(propertyId)
+		sink := n.Registry.ObjectSink(objectId)
 		if sink == nil {
-			return fmt.Errorf("no sink for %s", res)
+			return 0, fmt.Errorf("no sink for %s", propertyId)
 		}
-		sink.OnPropertyChange(res, value)
+		sink.OnPropertyChange(propertyId, value)
 	case core.MsgInvokeReply:
 		// lookup the pending invoke and call the function
-		id, res, value := msg.AsInvokeReply()
-		f, ok := c.pending[id]
+		requestId, methodId, value := msg.AsInvokeReply()
+		log.Infof("node %s: invoke reply: %d %s %v", n.Id(), requestId, methodId, value)
+		fn, ok := n.pending[requestId]
 		if !ok {
-			return fmt.Errorf("no pending invoke with id %d", id)
+			return 0, fmt.Errorf("no pending invoke with id %d", requestId)
 		}
-		delete(c.pending, id)
-		f(InvokeReplyArg{res, value})
+		delete(n.pending, requestId)
+		fn(InvokeReplyArg{methodId, value})
 	case core.MsgSignal:
 		// get the sink and call the on signal method
-		res, args := msg.AsSignal()
-		sink := c.Registry.GetObjectSink(res.ObjectId())
+		signalId, args := msg.AsSignal()
+		objectId := core.ToObjectId(signalId)
+		sink := n.Registry.ObjectSink(objectId)
 		if sink == nil {
-			return fmt.Errorf("no sink for %s", res)
+			return 0, fmt.Errorf("no sink for %s", signalId)
 		}
-		sink.OnSignal(res, args)
+		sink.OnSignal(signalId, args)
 	case core.MsgError:
 		// report the error
 		msgType, id, error := msg.AsError()
-		log.Printf("client node error: %d, %d, %s", msgType, id, error)
+		log.Infof("client node error: %d, %d, %s", msgType, id, error)
 	default:
-		// unknown message type
-		return fmt.Errorf("unknown message type %d", msg.Type())
+		return 0, fmt.Errorf("unknown type in client message: %#v", msg)
 	}
-	return nil
+	return len(data), nil
 }
 
-func (c *Node) InvokeRemote(res core.Resource, args core.Args, f InvokeReplyFunc) {
-	c.seqId++
-	c.pending[c.seqId] = f
-	c.WriteMessage(core.CreateInvokeMessage(c.seqId, res, args))
+func (n *Node) InvokeRemote(methodId string, args core.Args, f InvokeReplyFunc) {
+	n.seqId++
+	n.pending[n.seqId] = f
+	n.SendMessage(core.MakeInvokeMessage(n.seqId, methodId, args))
 }
 
-func (c *Node) SetRemoteProperty(res core.Resource, value core.Any) {
-	c.WriteMessage(core.CreateSetPropertyMessage(res, value))
+func (n *Node) SetRemoteProperty(propertyId string, value core.Any) {
+	n.SendMessage(core.MakeSetPropertyMessage(propertyId, value))
 }
 
-func (c *Node) LinkRemoteNode(name string) {
-	c.WriteMessage(core.CreateLinkMessage(name))
+func (n *Node) LinkRemoteNode(objectId string) {
+	n.Registry.LinkClientNode(objectId, n)
+	n.SendMessage(core.MakeLinkMessage(objectId))
 }
 
-func (c *Node) UnlinkRemoteNode(name string) {
-	c.WriteMessage(core.CreateUnlinkMessage(name))
+func (n *Node) UnlinkRemoteNode(objectId string) {
+	n.Registry.UnlinkClientNode(objectId)
+	n.SendMessage(core.MakeUnlinkMessage(objectId))
 }

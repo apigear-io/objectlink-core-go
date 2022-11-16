@@ -1,18 +1,41 @@
 package remote
 
+import (
+	"fmt"
+	"olink/log"
+	"olink/pkg/core"
+)
+
+var registryId = 0
+
+func nextRegistryId() string {
+	registryId++
+	return fmt.Sprintf("r%d", registryId)
+}
+
 type SourceToNodeEntry struct {
 	source IObjectSource
 	nodes  []*Node
 }
 
+// Registry is the registry of remote objects.
+// It is optimized for the retrieval of object sources
+// A object source is registered in the registry and can be retrieved by the object id.
+// The source can have one or more remote nodes linked to it.
 type Registry struct {
+	id      string
 	entries map[string]*SourceToNodeEntry
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
+		id:      nextRegistryId(),
 		entries: make(map[string]*SourceToNodeEntry),
 	}
+}
+
+func (r *Registry) Id() string {
+	return r.id
 }
 
 // AddObjectSource adds the object source to the registry.
@@ -60,6 +83,7 @@ func (r *Registry) DetachRemoteNode(node *Node) {
 
 // LinkRemoteNode adds a link between the object and the node.
 func (r *Registry) LinkRemoteNode(objectId string, node *Node) {
+	log.Infof("link remote node: %s %s", objectId, node.Id())
 	r.entry(objectId).nodes = append(r.entry(objectId).nodes, node)
 }
 
@@ -73,12 +97,23 @@ func (r *Registry) UnlinkRemoteNode(objectId string, node *Node) {
 }
 
 func (r *Registry) entry(objectId string) *SourceToNodeEntry {
-	if r.entries[objectId] == nil {
-		r.entries[objectId] = &SourceToNodeEntry{}
+	e, ok := r.entries[objectId]
+	if !ok {
+		e = &SourceToNodeEntry{
+			source: nil,
+			nodes:  make([]*Node, 0),
+		}
+		r.entries[objectId] = e
 	}
-	return r.entries[objectId]
+	return e
 }
 
 func (r *Registry) removeEntry(objectId string) {
 	delete(r.entries, objectId)
+}
+
+func (e *Registry) NotifyPropertyChange(objectId string, value core.Any) {
+	for _, n := range e.entry(objectId).nodes {
+		n.NotifyPropertyChange(objectId, value)
+	}
 }

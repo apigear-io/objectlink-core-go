@@ -8,12 +8,12 @@ import (
 
 type Data struct {
 	ObjectId     string
-	Resource     Resource
+	Resource     string
 	Props        KWArgs
 	Value        interface{}
 	LastValue    interface{}
 	Args         Args
-	RequestId    int
+	RequestId    int64
 	ErrorMessage string
 	MsgType      MsgType
 }
@@ -41,46 +41,46 @@ var data = Data{
 // var errorMessage = "failed"
 
 func TestLinkMessage(t *testing.T) {
-	msg := CreateLinkMessage(data.ObjectId)
+	msg := MakeLinkMessage(data.ObjectId)
 	assert.Equal(t, Message{MsgLink, data.ObjectId}, msg)
 }
 
 func TestUnlinkMessage(t *testing.T) {
-	msg := CreateUnlinkMessage(data.ObjectId)
+	msg := MakeUnlinkMessage(data.ObjectId)
 	assert.Equal(t, Message{MsgUnlink, data.ObjectId}, msg)
 }
 
 func TestInitMessage(t *testing.T) {
-	msg := CreateInitMessage(data.ObjectId, data.Props)
+	msg := MakeInitMessage(data.ObjectId, data.Props)
 	assert.Equal(t, Message{MsgInit, data.ObjectId, data.Props}, msg)
 }
 
 func TestSetProperty(t *testing.T) {
-	msg := CreateSetPropertyMessage(data.Resource, data.Value)
+	msg := MakeSetPropertyMessage(data.Resource, data.Value)
 	assert.Equal(t, Message{MsgSetProperty, data.Resource, data.Value}, msg)
 }
 
 func TestPropertyChange(t *testing.T) {
-	msg := CreatePropertyChangeMessage(data.Resource, data.Value)
+	msg := MakePropertyChangeMessage(data.Resource, data.Value)
 	assert.Equal(t, Message{MsgPropertyChange, data.Resource, data.Value}, msg)
 }
 
 func TestInvoke(t *testing.T) {
-	msg := CreateInvokeMessage(data.RequestId, data.Resource, data.Args)
+	msg := MakeInvokeMessage(data.RequestId, data.Resource, data.Args)
 	assert.Equal(t, Message{MsgInvoke, data.RequestId, data.Resource, data.Args}, msg)
 }
 
 func TestInvokeReply(t *testing.T) {
-	msg := CreateInvokeReplyMessage(data.RequestId, data.Resource, data.Value)
+	msg := MakeInvokeReplyMessage(data.RequestId, data.Resource, data.Value)
 	assert.Equal(t, Message{MsgInvokeReply, data.RequestId, data.Resource, data.Value}, msg)
 }
 
 func TestSignal(t *testing.T) {
-	msg := CreateSignalMessage(data.Resource, data.Args)
+	msg := MakeSignalMessage(data.Resource, data.Args)
 	assert.Equal(t, Message{MsgSignal, data.Resource, data.Args}, msg)
 }
 
 func TestError(t *testing.T) {
-	msg := CreateErrorMessage(data.MsgType, data.RequestId, data.ErrorMessage)
+	msg := MakeErrorMessage(data.MsgType, data.RequestId, data.ErrorMessage)
 	assert.Equal(t, Message{MsgError, data.MsgType, data.RequestId, data.ErrorMessage}, msg)
 }

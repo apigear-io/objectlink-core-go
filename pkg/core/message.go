@@ -1,6 +1,6 @@
 package core
 
-type MsgType int
+type MsgType int64
 
 const (
 	MsgUnknown        MsgType = 0
@@ -17,6 +17,17 @@ const (
 
 type Args []any
 type KWArgs map[string]any
+
+func (a KWArgs) Keys() []string {
+	keys := make([]string, len(a))
+	i := 0
+	for k := range a {
+		keys[i] = k
+		i++
+	}
+	return keys
+}
+
 type Any any
 
 type Message []any
@@ -41,42 +52,47 @@ func (m Message) AsUnlink() string {
 }
 
 // AsSetProperty returns the name and value of the message
-func (m Message) AsSetProperty() (Resource, Any) {
-	return AsResource(m[1]), AsAny(m[2])
+// message := MsgType, PropertyId, Value
+func (m Message) AsSetProperty() (string, Any) {
+	return AsString(m[1]), AsAny(m[2])
 }
 
 // AsPropertyChange returns the name and value of the property change
-func (m Message) AsPropertyChange() (Resource, Any) {
-	return AsResource(m[1]), AsAny(m[2])
+// message := MsgType, PropertyId, Value
+func (m Message) AsPropertyChange() (string, Any) {
+	return AsString(m[1]), AsAny(m[2])
 }
 
 // AsInvoke returns the id, name and args of the invoke message
-func (m Message) AsInvoke() (int, Resource, Args) {
-	return AsInt(m[1]), AsResource(m[2]), AsArgs(m[3])
+// message := MsgType, RequestId, MethodId, Args
+func (m Message) AsInvoke() (int64, string, Args) {
+	return AsInt(m[1]), AsString(m[2]), AsArgs(m[3])
 }
 
 // AsInvokeReply returns the id and result of the invoke reply
-func (m Message) AsInvokeReply() (int, Resource, Any) {
-	return AsInt(m[1]), AsResource(m[2]), AsAny(m[3])
+// message := MsgType, RequestId, MethodId, Value
+func (m Message) AsInvokeReply() (int64, string, Any) {
+	return AsInt(m[1]), AsString(m[2]), AsAny(m[3])
 }
 
 // AsSignal returns the name and args of the signal message
-func (m Message) AsSignal() (Resource, Args) {
-	return AsResource(m[1]), AsArgs(m[2])
+// message := MsgType, SignalId, Args
+func (m Message) AsSignal() (string, Args) {
+	return AsString(m[1]), AsArgs(m[2])
 }
 
-func (m Message) AsError() (MsgType, int, string) {
+func (m Message) AsError() (MsgType, int64, string) {
 	return AsMsgType(m[0]), AsInt(m[1]), AsString(m[2])
 }
 
-func CreateLinkMessage(objectId string) Message {
+func MakeLinkMessage(objectId string) Message {
 	return Message{
 		MsgLink,
 		objectId,
 	}
 }
 
-func CreateInitMessage(objectId string, props KWArgs) Message {
+func MakeInitMessage(objectId string, props KWArgs) Message {
 	return Message{
 		MsgInit,
 		objectId,
@@ -84,56 +100,56 @@ func CreateInitMessage(objectId string, props KWArgs) Message {
 	}
 }
 
-func CreateUnlinkMessage(objectId string) Message {
+func MakeUnlinkMessage(objectId string) Message {
 	return Message{
 		MsgUnlink,
 		objectId,
 	}
 }
 
-func CreateSetPropertyMessage(res Resource, value Any) Message {
+func MakeSetPropertyMessage(propertyId string, value Any) Message {
 	return Message{
 		MsgSetProperty,
-		res,
+		propertyId,
 		value,
 	}
 }
 
-func CreatePropertyChangeMessage(res Resource, value Any) Message {
+func MakePropertyChangeMessage(propertyId string, value Any) Message {
 	return Message{
 		MsgPropertyChange,
-		res,
+		propertyId,
 		value,
 	}
 }
 
-func CreateInvokeMessage(id int, res Resource, args Args) Message {
+func MakeInvokeMessage(requestId int64, methodId string, args Args) Message {
 	return Message{
 		MsgInvoke,
-		id,
-		res,
+		requestId,
+		methodId,
 		args,
 	}
 }
 
-func CreateInvokeReplyMessage(id int, res Resource, value Any) Message {
+func MakeInvokeReplyMessage(requestId int64, methodId string, value Any) Message {
 	return Message{
 		MsgInvokeReply,
-		id,
-		res,
+		requestId,
+		methodId,
 		value,
 	}
 }
 
-func CreateSignalMessage(res Resource, args Args) Message {
+func MakeSignalMessage(signalId string, args Args) Message {
 	return Message{
 		MsgSignal,
-		res,
+		signalId,
 		args,
 	}
 }
 
-func CreateErrorMessage(msgType MsgType, id int, error string) Message {
+func MakeErrorMessage(msgType MsgType, id int64, error string) Message {
 	return Message{
 		MsgError,
 		msgType,

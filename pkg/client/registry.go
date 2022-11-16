@@ -1,35 +1,65 @@
 package client
 
+import (
+	"fmt"
+	"olink/log"
+)
+
 type SinkToClientEntry struct {
 	sink IObjectSink
 	node *Node
 }
 
+var registryId = 0
+
+func nextRegistryId() string {
+	registryId++
+	return fmt.Sprintf("r%d", registryId)
+}
+
+// Registry is a registry of object sinks.
+// It is used to keep track of object sinks and their associated client nodes.
+// It is optimized for the retrieval of object sinks by object id.
+// A sink is always associated with zero or one client node.
+// A node can be linked to zero or many sinks.
 type Registry struct {
+	id      string
 	entries map[string]*SinkToClientEntry
 }
 
 func NewRegistry() *Registry {
 	return &Registry{
+		id:      nextRegistryId(),
 		entries: make(map[string]*SinkToClientEntry),
 	}
 }
 
+func (r *Registry) Id() string {
+	return r.id
+}
+
 // attach client node to registry
-func (registry *Registry) AttachClientNode(node *Node) {
+func (r *Registry) AttachClientNode(node *Node) {
 }
 
 // detach client node from registry
-func (registry *Registry) DetachClientNode(node *Node) {
-	for _, v := range registry.entries {
-		if v.node == node {
-			v.node = nil
+func (r *Registry) DetachClientNode(node *Node) {
+	log.Infof("%s: node %s", r.Id(), node.Id())
+	for _, e := range r.entries {
+		if e.node == node {
+			log.Infof("  %s: remove node %s from sink %s", r.Id(), node.Id(), e.sink.ObjectId())
+			e.node = nil
 		}
 	}
 }
 
 func (r *Registry) LinkClientNode(objectId string, node *Node) {
-	r.Entry(objectId).node = node
+	if entry := r.Entry(objectId); entry != nil {
+		log.Infof("link client node %s to object %s", node.Id(), objectId)
+		entry.node = node
+	} else {
+		log.Warnf("no sink for object %s", objectId)
+	}
 }
 
 func (r *Registry) UnlinkClientNode(objectId string) {
@@ -41,17 +71,23 @@ func (r *Registry) AddObjectSink(sink IObjectSink) {
 }
 
 // remove object sink from registry
-func (registry *Registry) RemoveObjectSink(sink IObjectSink) {
-	objectId := sink.ObjectId()
-	registry.RemoveEntry(objectId)
+func (r *Registry) RemoveObjectSink(objectId string) {
+	log.Debugf("remove object sink %s", objectId)
+	sink := r.Entry(objectId).sink
+	if sink != nil {
+		sink.OnRelease()
+	} else {
+		log.Debugf("object sink %s not found", objectId)
+	}
+	r.RemoveEntry(objectId)
 }
 
 // get object sink by name
-func (r *Registry) GetObjectSink(objectId string) IObjectSink {
+func (r *Registry) ObjectSink(objectId string) IObjectSink {
 	return r.Entry(objectId).sink
 }
 
-func (r *Registry) GetClientNode(objectId string) *Node {
+func (r *Registry) Node(objectId string) *Node {
 	return r.Entry(objectId).node
 }
 
@@ -67,4 +103,12 @@ func (r *Registry) Entry(objectId string) *SinkToClientEntry {
 
 func (r *Registry) RemoveEntry(objectId string) {
 	delete(r.entries, objectId)
+}
+
+func (r *Registry) ObjectIds() []string {
+	ids := make([]string, 0, len(r.entries))
+	for id := range r.entries {
+		ids = append(ids, id)
+	}
+	return ids
 }

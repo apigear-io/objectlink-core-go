@@ -12,16 +12,16 @@ func (m *MockSink) ObjectId() string {
 	return m.objectId
 }
 
-func (m *MockSink) OnSignal(res core.Resource, args core.Args) {
-	m.events = append(m.events, core.CreateSignalMessage(res, args))
+func (m *MockSink) OnSignal(signalId string, args core.Args) {
+	m.events = append(m.events, core.MakeSignalMessage(signalId, args))
 }
 
-func (m *MockSink) OnPropertyChange(res core.Resource, value core.Any) {
-	m.events = append(m.events, core.CreatePropertyChangeMessage(res, value))
+func (m *MockSink) OnPropertyChange(propertyId string, value core.Any) {
+	m.events = append(m.events, core.MakePropertyChangeMessage(propertyId, value))
 }
 
 func (m *MockSink) OnInit(objectId string, props core.KWArgs, node *Node) {
-	m.events = append(m.events, core.CreateInitMessage(objectId, props))
+	m.events = append(m.events, core.MakeInitMessage(objectId, props))
 }
 
 func (m *MockSink) OnRelease() {}

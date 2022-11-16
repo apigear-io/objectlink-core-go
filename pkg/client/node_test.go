@@ -13,22 +13,23 @@ func makeNodeAndSink(t *testing.T) (*Node, *MockSink, *core.MockDataWriter) {
 	sink := &MockSink{objectId: name}
 	registry := NewRegistry()
 	writer := core.NewMockDataWriter()
-	client := NewNode(registry, writer)
-	return client, sink, writer
+	node := NewNode(registry)
+	node.SetOutput(writer)
+	return node, sink, writer
 }
 
 func TestClientGetSink(t *testing.T) {
 	client, sink, _ := makeNodeAndSink(t)
 	client.Registry.AddObjectSink(sink)
-	sink2 := client.Registry.GetObjectSink(sink.ObjectId())
+	sink2 := client.Registry.ObjectSink(sink.ObjectId())
 	assert.Equal(t, sink, sink2, "sink should be the same")
 }
 
 func TestClientRemoveSink(t *testing.T) {
 	client, sink, _ := makeNodeAndSink(t)
 	client.Registry.AddObjectSink(sink)
-	client.Registry.RemoveObjectSink(sink)
-	sink2 := client.Registry.GetObjectSink(sink.ObjectId())
+	client.Registry.RemoveObjectSink(sink.ObjectId())
+	sink2 := client.Registry.ObjectSink(sink.ObjectId())
 	assert.Nil(t, sink2, "sink should be nil")
 }
 
@@ -36,7 +37,7 @@ func TestLinkNode(t *testing.T) {
 	node, sink, _ := makeNodeAndSink(t)
 	node.Registry.AddObjectSink(sink)
 	node.Registry.LinkClientNode(sink.ObjectId(), node)
-	sink2 := node.Registry.GetObjectSink(sink.ObjectId())
+	sink2 := node.Registry.ObjectSink(sink.ObjectId())
 	assert.Equal(t, sink, sink2, "sink should be the same")
 }
 
@@ -45,7 +46,7 @@ func TestLinkRemote(t *testing.T) {
 	node.Registry.AddObjectSink(sink)
 	// links and notifies remote
 	node.LinkRemoteNode(sink.ObjectId())
-	sink2 := node.Registry.GetObjectSink(sink.ObjectId())
+	sink2 := node.Registry.ObjectSink(sink.ObjectId())
 	assert.Equal(t, sink, sink2, "sink should be the same")
 	// writer should have one link message
 	assert.Equal(t, 1, len(writer.Messages), "should have 1 message")
@@ -57,19 +58,19 @@ func TestSetRemoteProperty(t *testing.T) {
 	node.Registry.AddObjectSink(sink)
 	// links and notifies remote
 	node.LinkRemoteNode(sink.ObjectId())
-	sink2 := node.Registry.GetObjectSink(sink.ObjectId())
+	sink2 := node.Registry.ObjectSink(sink.ObjectId())
 	assert.Equal(t, sink, sink2, "sink should be the same")
 	// writer should have one link message
 	assert.Equal(t, 1, len(writer.Messages), "should have 1 message")
 	assert.Equal(t, sink.ObjectId(), writer.Messages[0].AsLink(), "should be init message")
 	// set property
-	res := core.CreateResource(sink.ObjectId(), "prop")
-	node.SetRemoteProperty(res, "value")
+	propertyId := core.MakeIdentifier(sink.ObjectId(), "prop")
+	node.SetRemoteProperty(propertyId, "value")
 	// writer should have one property message
 	assert.Equal(t, 2, len(writer.Messages), "should have 2 message")
 
-	res2, value := writer.Messages[1].AsPropertyChange()
-	assert.Equal(t, res, res2, "should be prop")
+	propertyId2, value := writer.Messages[1].AsPropertyChange()
+	assert.Equal(t, propertyId, propertyId2, "should be prop")
 	assert.Equal(t, "value", value, "should be value")
 }
 
@@ -78,19 +79,19 @@ func TestInvokeRemote(t *testing.T) {
 	node.Registry.AddObjectSink(sink)
 	// links and notifies remote
 	node.LinkRemoteNode(sink.ObjectId())
-	sink2 := node.Registry.GetObjectSink(sink.ObjectId())
+	sink2 := node.Registry.ObjectSink(sink.ObjectId())
 	assert.Equal(t, sink, sink2, "sink should be the same")
 	// writer should have one link message
 	assert.Equal(t, 1, len(writer.Messages), "should have 1 message")
 	assert.Equal(t, sink.ObjectId(), writer.Messages[0].AsLink(), "should be init message")
 	// invoke remote
-	res := core.CreateResource(sink.ObjectId(), "method")
-	node.InvokeRemote(res, core.Args{}, func(args InvokeReplyArg) {})
+	methodId := core.MakeIdentifier(sink.ObjectId(), "method")
+	node.InvokeRemote(methodId, core.Args{}, func(args InvokeReplyArg) {})
 	// writer should have one invoke message
 	assert.Equal(t, 2, len(writer.Messages), "should have 2 message")
 	seq, res2, args := writer.Messages[1].AsInvoke()
 	assert.Equal(t, 1, seq, "should be seq 1")
-	assert.Equal(t, res, res2, "should be method")
+	assert.Equal(t, methodId, res2, "should be method")
 	assert.Equal(t, core.Args{}, args, "should be args")
 }
 
@@ -99,7 +100,7 @@ func TestUnlinkRemoteNode(t *testing.T) {
 	node.Registry.AddObjectSink(sink)
 	// links and notifies remote
 	node.LinkRemoteNode(sink.ObjectId())
-	sink2 := node.Registry.GetObjectSink(sink.ObjectId())
+	sink2 := node.Registry.ObjectSink(sink.ObjectId())
 	assert.Equal(t, sink, sink2, "sink should be the same")
 	// writer should have one link message
 	assert.Equal(t, 1, len(writer.Messages), "should have 1 message")
@@ -115,10 +116,10 @@ func TestHandleInit(t *testing.T) {
 	node, sink, _ := makeNodeAndSink(t)
 	node.Registry.AddObjectSink(sink)
 	node.Registry.LinkClientNode(sink.ObjectId(), node)
-	msg := core.CreateInitMessage(sink.ObjectId(), core.KWArgs{})
+	msg := core.MakeInitMessage(sink.ObjectId(), core.KWArgs{})
 	data, err := json.Marshal(msg)
 	assert.Nil(t, err, "should be nil")
-	node.HandleMessage(data)
+	node.Write(data)
 	assert.Equal(t, 1, len(sink.events), "should have 1 event")
 	assert.Equal(t, msg, sink.events[0], "should be init event")
 }
@@ -127,11 +128,11 @@ func TestHandlePropertyChange(t *testing.T) {
 	node, sink, _ := makeNodeAndSink(t)
 	node.Registry.AddObjectSink(sink)
 	node.Registry.LinkClientNode(sink.ObjectId(), node)
-	res := core.CreateResource(sink.ObjectId(), "prop")
-	msg := core.CreatePropertyChangeMessage(res, "value")
+	propertyId := core.MakeIdentifier(sink.ObjectId(), "prop")
+	msg := core.MakePropertyChangeMessage(propertyId, "value")
 	data, err := json.Marshal(msg)
 	assert.Nil(t, err, "should be nil")
-	node.HandleMessage(data)
+	node.Write(data)
 	assert.Equal(t, 1, len(sink.events), "should have 1 event")
 	assert.Equal(t, msg, sink.events[0], "should be property event")
 }
@@ -141,13 +142,13 @@ func TestHandleMsgInvokeReply(t *testing.T) {
 	node.Registry.AddObjectSink(sink)
 	node.Registry.LinkClientNode(sink.ObjectId(), node)
 	isCalled := false
-	res := core.CreateResource(sink.ObjectId(), "hello")
-	node.InvokeRemote(res, core.Args{}, func(args InvokeReplyArg) {
+	methodId := core.MakeIdentifier(sink.ObjectId(), "hello")
+	node.InvokeRemote(methodId, core.Args{}, func(args InvokeReplyArg) {
 		isCalled = true
 	})
-	msg := core.CreateInvokeReplyMessage(1, res, "value")
+	msg := core.MakeInvokeReplyMessage(1, methodId, "value")
 	data, err := json.Marshal(msg)
 	assert.Nil(t, err, "should be nil")
-	node.HandleMessage(data)
+	node.Write(data)
 	assert.True(t, isCalled, "should be called")
 }
