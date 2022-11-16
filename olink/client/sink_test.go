@@ -1,8 +1,9 @@
 package client
 
 import (
-	"olink/pkg/core"
 	"testing"
+
+	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
 type CounterSink struct {

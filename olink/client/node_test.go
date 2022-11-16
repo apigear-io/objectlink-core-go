@@ -2,8 +2,9 @@ package client
 
 import (
 	"encoding/json"
-	"olink/pkg/core"
 	"testing"
+
+	"github.com/apigear-io/objectlink-core-go/olink/core"
 
 	"github.com/stretchr/testify/assert"
 )

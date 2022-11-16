@@ -1,4 +1,4 @@
-module olink
+module github.com/apigear-io/objectlink-core-go
 
 go 1.18
 

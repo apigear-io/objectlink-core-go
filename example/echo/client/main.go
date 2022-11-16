@@ -3,14 +3,16 @@ package main
 import (
 	"flag"
 	"fmt"
-	"olink/log"
-	"olink/pkg/client"
-	"olink/pkg/core"
-	"olink/pkg/ws"
 	"os"
 	"os/signal"
 	"sync"
 	"time"
+
+	"github.com/apigear-io/objectlink-core-go/olink/core"
+	"github.com/apigear-io/objectlink-core-go/olink/ws"
+
+	"github.com/apigear-io/objectlink-core-go/log"
+	"github.com/apigear-io/objectlink-core-go/olink/client"
 )
 
 var addr = flag.String("addr", "ws://127.0.0.1:8080/ws", "http ws service address")

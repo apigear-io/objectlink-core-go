@@ -2,8 +2,10 @@ package remote
 
 import (
 	"fmt"
-	"olink/log"
-	"olink/pkg/core"
+
+	"github.com/apigear-io/objectlink-core-go/log"
+
+	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
 var registryId = 0

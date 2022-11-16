@@ -3,8 +3,10 @@ package remote
 import (
 	"fmt"
 	"io"
-	"olink/log"
-	"olink/pkg/core"
+
+	"github.com/apigear-io/objectlink-core-go/log"
+
+	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
 var id = 0

@@ -1,8 +1,8 @@
 package cli
 
 import (
-	"olink/pkg/client"
-	"olink/pkg/ws"
+	"github.com/apigear-io/objectlink-core-go/olink/client"
+	"github.com/apigear-io/objectlink-core-go/olink/ws"
 )
 
 var registry = client.NewRegistry()

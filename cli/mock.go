@@ -2,8 +2,9 @@ package cli
 
 import (
 	"fmt"
-	"olink/pkg/client"
-	"olink/pkg/core"
+
+	"github.com/apigear-io/objectlink-core-go/olink/client"
+	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
 type MockSink struct {

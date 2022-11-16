@@ -3,10 +3,11 @@ package cli
 import (
 	"encoding/json"
 	"fmt"
-	"olink/log"
-	"olink/pkg/client"
-	"olink/pkg/core"
 	"strings"
+
+	"github.com/apigear-io/objectlink-core-go/log"
+	"github.com/apigear-io/objectlink-core-go/olink/client"
+	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
 var invoke = Command{

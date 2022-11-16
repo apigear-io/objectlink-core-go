@@ -2,8 +2,9 @@ package core
 
 import (
 	"encoding/json"
-	"olink/log"
 	"strconv"
+
+	"github.com/apigear-io/objectlink-core-go/log"
 )
 
 func AsBool(v Any) bool {

@@ -4,10 +4,11 @@ import (
 	"flag"
 	"fmt"
 	"net/http"
-	"olink/log"
-	"olink/pkg/core"
-	"olink/pkg/remote"
-	"olink/pkg/ws"
+
+	"github.com/apigear-io/objectlink-core-go/log"
+	"github.com/apigear-io/objectlink-core-go/olink/core"
+	"github.com/apigear-io/objectlink-core-go/olink/remote"
+	"github.com/apigear-io/objectlink-core-go/olink/ws"
 )
 
 var addr = flag.String("addr", ":8080", "http service address")

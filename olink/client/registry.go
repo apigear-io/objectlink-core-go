@@ -2,7 +2,8 @@ package client
 
 import (
 	"fmt"
-	"olink/log"
+
+	"github.com/apigear-io/objectlink-core-go/log"
 )
 
 type SinkToClientEntry struct {

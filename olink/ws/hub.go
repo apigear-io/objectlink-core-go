@@ -2,8 +2,10 @@ package ws
 
 import (
 	"net/http"
-	"olink/log"
-	"olink/pkg/remote"
+
+	"github.com/apigear-io/objectlink-core-go/log"
+
+	"github.com/apigear-io/objectlink-core-go/olink/remote"
 
 	"github.com/gorilla/websocket"
 )

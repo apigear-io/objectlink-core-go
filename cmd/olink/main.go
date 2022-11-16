@@ -1,7 +1,7 @@
 package main
 
 import (
-	"olink/cli"
+	"github.com/apigear-io/objectlink-core-go/cli"
 )
 
 func main() {

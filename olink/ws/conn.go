@@ -6,7 +6,7 @@ import (
 	"sync"
 	"time"
 
-	"olink/log"
+	"github.com/apigear-io/objectlink-core-go/log"
 
 	"github.com/gorilla/websocket"
 )
