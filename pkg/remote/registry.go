@@ -83,7 +83,7 @@ func (r *Registry) DetachRemoteNode(node *Node) {
 
 // LinkRemoteNode adds a link between the object and the node.
 func (r *Registry) LinkRemoteNode(objectId string, node *Node) {
-	log.Infof("link remote node: %s %s", objectId, node.Id())
+	log.Info().Msgf("registry: link %s -> %s", objectId, node.Id())
 	r.entry(objectId).nodes = append(r.entry(objectId).nodes, node)
 }
 

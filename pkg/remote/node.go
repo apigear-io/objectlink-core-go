@@ -49,14 +49,14 @@ func (n *Node) RemoveNode() {
 }
 
 func (n *Node) Close() error {
-	log.Infof("%s close\n", n.Id())
+	log.Info().Msgf("node: close %s", n.Id())
 	// close(n.incoming)
 	// n.incoming = nil
 	return nil
 }
 
 func (n *Node) Write(data []byte) (int, error) {
-	log.Debugf("node: write incoming<- %s\n", data)
+	log.Debug().Msgf("node: write input-> %s\n", data)
 	// if n.incoming == nil {
 	// 	return 0, fmt.Errorf("node: write: node is closed")
 	// }
@@ -68,16 +68,16 @@ func (n *Node) IncomingPump() {
 	for data := range n.incoming {
 		msg, err := n.Converter.FromData(data)
 		if err != nil {
-			log.Infof("error converting message")
+			log.Info().Msgf("node: error parsing message: %v", err)
 		}
-		log.Infof("%s <- %v\n", n.Id(), msg)
+		log.Info().Msgf("%s <- %v", n.Id(), msg)
 		switch msg.Type() {
 		case core.MsgLink:
 			objectId := msg.AsLink()
 			n.Registry.LinkRemoteNode(objectId, n)
 			s := n.Registry.GetObjectSource(objectId)
 			if s == nil {
-				log.Infof("error getting object source: %s", objectId)
+				log.Info().Msgf("node: no source for %s", objectId)
 				break
 			}
 			s.Linked(objectId, n)
@@ -85,7 +85,7 @@ func (n *Node) IncomingPump() {
 
 			props, err := s.CollectProperties()
 			if err != nil {
-				log.Infof("error collecting properties")
+				log.Info().Msgf("node: error collecting properties: %v", err)
 				break
 			}
 			msg := core.MakeInitMessage(objectId, props)
@@ -100,7 +100,7 @@ func (n *Node) IncomingPump() {
 			objectId := core.ToObjectId(propertyId)
 			s := n.Registry.GetObjectSource(objectId)
 			if s == nil {
-				log.Infof("no source for %s from %s", objectId, propertyId)
+				log.Info().Msgf("node: no source for %s", objectId)
 				break
 			}
 			s.SetProperty(propertyId, value)
@@ -110,41 +110,41 @@ func (n *Node) IncomingPump() {
 		case core.MsgInvoke:
 			// invoke the method on the source
 			requestId, methodId, args := msg.AsInvoke()
-			log.Infof("node(%s): invoke: %d %s %v\n", n.Id(), requestId, methodId, args)
+			log.Info().Msgf("node: invoke %d %s %v", requestId, methodId, args)
 			objectId := core.ToObjectId(methodId)
 			s := n.Registry.GetObjectSource(objectId)
 			if s == nil {
-				log.Infof("no source for %s from %s", objectId, methodId)
+				log.Info().Msgf("node: no source for %s", objectId)
 				break
 			}
 			result, err := s.Invoke(methodId, args)
 			if err != nil {
-				log.Infof("error invoking %s: %s", methodId, err)
+				log.Info().Msgf("node: error invoking method: %v", err)
 			}
 			// send back the result
 			msg := core.MakeInvokeReplyMessage(requestId, methodId, result)
 			n.SendMessage(msg)
 		default:
-			log.Infof("unknown type in remote message: %#v type=%d", msg, msg.Type())
+			log.Info().Msgf("node: unknown message type: %v", msg.Type())
 		}
 	}
 }
 
 func (n *Node) SendMessage(msg core.Message) {
-	log.Infof("%s -> %v\n", n.Id(), msg)
+	log.Info().Msgf("%s -> %v", n.Id(), msg)
 	if n.output == nil {
-		log.Infof("error: no output for %s", n.Id())
+		log.Info().Msgf("node: no output")
 		return
 	}
 	data, err := n.Converter.ToData(msg)
 	if err != nil {
-		log.Infof("error converting message")
+		log.Info().Msgf("node: error converting message: %v", err)
 		return
 	}
-	log.Debugf("node: write output<- %s\n", data)
+	log.Debug().Msgf("node: write output-> %s\n", data)
 	_, err = n.output.Write(data)
 	if err != nil {
-		log.Infof("error writing message")
+		log.Info().Msgf("node: error writing message: %v", err)
 	}
 }
 

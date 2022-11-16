@@ -15,7 +15,7 @@ func AsBool(v Any) bool {
 	case float64:
 		return v != 0
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return false
 	}
 }
@@ -34,12 +34,12 @@ func AsFloat(v Any) float64 {
 	case json.Number:
 		i, err := v.Float64()
 		if err != nil {
-			log.Warnf("error: %v\n", err)
+			log.Warn().Msgf("error: %v\n", err)
 			return 0
 		}
 		return i
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return 0
 	}
 }
@@ -55,12 +55,12 @@ func AsInt(v any) int64 {
 	case json.Number:
 		i, err := v.Int64()
 		if err != nil {
-			log.Warnf("error: %v\n", err)
+			log.Warn().Msgf("error: %v\n", err)
 			return 0
 		}
 		return i
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return 0
 	}
 }
@@ -70,7 +70,7 @@ func AsArgs(v Any) Args {
 	case []any:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return nil
 	}
 }
@@ -80,7 +80,7 @@ func AsString(v Any) string {
 	case string:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return ""
 	}
 }
@@ -108,7 +108,7 @@ func AsMsgType(v Any) MsgType {
 		}
 		return MsgType(i)
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return 0
 	}
 }
@@ -122,7 +122,7 @@ func AsProps(v Any) KWArgs {
 	case map[string]any:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return nil
 	}
 }
@@ -132,7 +132,7 @@ func AsArrayBool(v Any) []bool {
 	case []bool:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return nil
 	}
 }
@@ -142,7 +142,7 @@ func AsArrayInt(v Any) []int64 {
 	case []int64:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return nil
 	}
 }
@@ -152,7 +152,7 @@ func AsArrayFloat(v Any) []float64 {
 	case []float64:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return nil
 	}
 }
@@ -162,7 +162,7 @@ func AsArrayString(v Any) []string {
 	case []string:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return nil
 	}
 }
@@ -172,7 +172,7 @@ func AsStruct(v Any) KWArgs {
 	case KWArgs:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return nil
 	}
 }
@@ -182,7 +182,7 @@ func AsEnum(v Any) []any {
 	case []any:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
+		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return nil
 	}
 }
@@ -196,8 +196,8 @@ func AsArrayStruct(v Any) []KWArgs {
 	case []KWArgs:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
-		return nil
+		log.Warn().Msgf("unknown type %#v %T", v, v)
+		return []KWArgs{}
 	}
 }
 
@@ -206,8 +206,8 @@ func AsArrayEnum(v Any) [][]any {
 	case [][]any:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
-		return nil
+		log.Warn().Msgf("unknown type %#v %T", v, v)
+		return [][]any{}
 	}
 }
 
@@ -216,7 +216,7 @@ func AsArrayInterface(v Any) []interface{} {
 	case []interface{}:
 		return v
 	default:
-		log.Warnf("unknown type %#v %T", v, v)
-		return nil
+		log.Warn().Msgf("unknown type %#v %T", v, v)
+		return []interface{}{}
 	}
 }

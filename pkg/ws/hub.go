@@ -41,13 +41,13 @@ func (h *Hub) run() {
 	for {
 		select {
 		case conn := <-h.register:
-			log.Infof("hub: register: %s\n", conn.Id())
+			log.Info().Msgf("hub: register: %s\n", conn.Id())
 			node := remote.NewNode(h.registry)
 			node.SetOutput(conn)
 			conn.SetOutput(node)
 			h.conns = append(h.conns, conn)
 		case conn := <-h.unregister:
-			log.Infof("hub: unregister: %s\n", conn.Id())
+			log.Info().Msgf("hub: unregister: %s\n", conn.Id())
 			for i, c := range h.conns {
 				if c == conn {
 					h.conns = append(h.conns[:i], h.conns[i+1:]...)
@@ -56,7 +56,7 @@ func (h *Hub) run() {
 				}
 			}
 		case msg := <-h.broadcast:
-			log.Infof("hub: broadcast: %s\n", msg)
+			log.Info().Msgf("hub: broadcast: %s\n", msg)
 			for _, conn := range h.conns {
 				select {
 				case conn.input <- msg:
@@ -72,10 +72,10 @@ func (h *Hub) run() {
 func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	socket, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Infoln("upgrade:", err)
+		log.Info().Err(err).Msg("error upgrade http call to websocket")
 		return
 	}
-	log.Infof("new connection: %s\n", socket.RemoteAddr())
+	log.Info().Msgf("new connection: %s\n", socket.RemoteAddr())
 	conn := NewConnection(socket)
 	conn.OnClosing = func() {
 		h.unregister <- conn

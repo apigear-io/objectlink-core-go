@@ -90,7 +90,7 @@ func TestInvokeRemote(t *testing.T) {
 	// writer should have one invoke message
 	assert.Equal(t, 2, len(writer.Messages), "should have 2 message")
 	seq, res2, args := writer.Messages[1].AsInvoke()
-	assert.Equal(t, 1, seq, "should be seq 1")
+	assert.Equal(t, int64(1), seq, "should be seq 1")
 	assert.Equal(t, methodId, res2, "should be method")
 	assert.Equal(t, core.Args{}, args, "should be args")
 }

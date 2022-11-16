@@ -44,10 +44,10 @@ func (r *Registry) AttachClientNode(node *Node) {
 
 // detach client node from registry
 func (r *Registry) DetachClientNode(node *Node) {
-	log.Infof("%s: node %s", r.Id(), node.Id())
+	log.Info().Msgf("detach client node %s", node.Id())
 	for _, e := range r.entries {
 		if e.node == node {
-			log.Infof("  %s: remove node %s from sink %s", r.Id(), node.Id(), e.sink.ObjectId())
+			log.Info().Msgf("unlink client node %s from object %s", node.Id(), e.sink.ObjectId())
 			e.node = nil
 		}
 	}
@@ -55,10 +55,10 @@ func (r *Registry) DetachClientNode(node *Node) {
 
 func (r *Registry) LinkClientNode(objectId string, node *Node) {
 	if entry := r.Entry(objectId); entry != nil {
-		log.Infof("link client node %s to object %s", node.Id(), objectId)
+		log.Info().Msgf("link client node %s to object %s", node.Id(), objectId)
 		entry.node = node
 	} else {
-		log.Warnf("no sink for object %s", objectId)
+		log.Warn().Msgf("object %s not found", objectId)
 	}
 }
 
@@ -72,12 +72,13 @@ func (r *Registry) AddObjectSink(sink IObjectSink) {
 
 // remove object sink from registry
 func (r *Registry) RemoveObjectSink(objectId string) {
-	log.Debugf("remove object sink %s", objectId)
+	log.Info().Msgf("remove object sink %s", objectId)
 	sink := r.Entry(objectId).sink
+
 	if sink != nil {
 		sink.OnRelease()
 	} else {
-		log.Debugf("object sink %s not found", objectId)
+		log.Warn().Msgf("object sink %s not found", objectId)
 	}
 	r.RemoveEntry(objectId)
 }

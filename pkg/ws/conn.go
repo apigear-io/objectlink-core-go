@@ -39,12 +39,12 @@ type Connection struct {
 }
 
 func Dial(url string) (*Connection, error) {
-	log.Debugf("dial: %s", url)
+	log.Debug().Msgf("dial: %s", url)
 	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return nil, err
 	}
-	log.Debugf("connected to: %s\n", url)
+	log.Debug().Msgf("connected to: %s\n", url)
 	conn := NewConnection(ws)
 	return conn, nil
 }
@@ -59,7 +59,7 @@ func NewConnection(socket *websocket.Conn) *Connection {
 	socket.SetReadLimit(maxMessageSize)
 	socket.SetPongHandler(func(string) error {
 		deadline := time.Now().Add(pongWait)
-		log.Debugf("conn: handle pong %v\n", deadline)
+		log.Debug().Msgf("conn: handle pong %v\n", deadline)
 		return socket.SetReadDeadline(deadline)
 	})
 	socket.SetCloseHandler(func(code int, text string) error {
@@ -78,21 +78,21 @@ func (c *Connection) Close() error {
 	if c.done == nil {
 		return nil
 	}
-	log.Infof("%s close\n", c.Id())
+	log.Info().Msgf("%s close\n", c.Id())
 	if c.output != nil {
 		err := c.output.Close()
 		if err != nil {
-			log.Warnf("%s close output error: %v\n", c.Id(), err)
+			log.Warn().Msgf("%s close output error: %v\n", c.Id(), err)
 		}
 	}
-	log.Debugf("%s: close done\n", c.Id())
+	log.Debug().Msgf("%s: close done\n", c.Id())
 	// close done channel to stop write pump
 	close(c.done)
 	c.done = nil
 	c.socket.SetWriteDeadline(time.Now().Add(pongWait))
 	err := c.socket.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
 	if err != nil {
-		log.Warnf("%s close error: %v\n", c.Id(), err)
+		log.Warn().Msgf("%s close error: %v\n", c.Id(), err)
 	}
 	c.socket.Close()
 	if c.OnClosing != nil {
@@ -116,39 +116,39 @@ func (c *Connection) SetOutput(out io.WriteCloser) {
 }
 
 func (c *Connection) Write(data []byte) (int, error) {
-	log.Debugf("conn: inputC<- %s", data)
+	log.Debug().Msgf("conn: inputC<- %s", data)
 	c.input <- data
 	return len(data), nil
 }
 
 func (c *Connection) WritePump() {
-	log.Debugf("%s: start write pump\n", c.Id())
+	log.Debug().Msgf("%s: start write pump\n", c.Id())
 	ticker := time.NewTicker(pingPeriod)
 	defer func() {
-		log.Debugf("%s: stop write pump\n", c.Id())
+		log.Debug().Msgf("%s: stop write pump\n", c.Id())
 		ticker.Stop()
 		c.Close()
 	}()
 	for {
 		select {
 		case <-c.done:
-			log.Debugf("%s: write pump done\n", c.Id())
+			log.Debug().Msgf("%s: write pump done\n", c.Id())
 			// end go routine
 			return
 		case data := <-c.input:
 			// send message from protocol handler
-			log.Debugf("conn: %s <-inputC %s\n", c.Id(), data)
+			log.Debug().Msgf("conn: %s <-inputC %s\n", c.Id(), data)
 			err := c.socket.WriteMessage(websocket.TextMessage, data)
 			if err != nil {
-				log.Warnf("write error: %s", err)
+				log.Warn().Msgf("write error: %s", err)
 				return
 			}
 		case t := <-ticker.C:
 			// send ping message
-			log.Debugf("conn: <-ticker %s\n", t)
+			log.Debug().Msgf("conn: <-ticker %s\n", t)
 			err := c.socket.WriteMessage(websocket.PingMessage, []byte(t.String()))
 			if err != nil {
-				log.Warnf("write error: %s", err)
+				log.Warn().Msgf("write error: %s", err)
 				return
 			}
 		}
@@ -156,16 +156,16 @@ func (c *Connection) WritePump() {
 }
 
 func (c *Connection) ReadPump() {
-	log.Debugf("%s: start read pump\n", c.Id())
+	log.Debug().Msgf("%s: start read pump\n", c.Id())
 	defer func() {
-		log.Debugf("%s: stop read pump\n", c.Id())
+		log.Debug().Msgf("%s: stop read pump\n", c.Id())
 		// close connection if we stop reading
 		c.Close()
 	}()
 	for {
 		select {
 		case <-c.done:
-			log.Debugf("conn: <-done\n")
+			log.Debug().Msgf("conn: <-done\n")
 			return
 		default:
 			c.socket.SetReadDeadline(time.Now().Add(pongWait))
@@ -178,12 +178,12 @@ func (c *Connection) ReadPump() {
 				_, err = c.output.Write(bytes)
 				c.mu.Unlock()
 			} else {
-				log.Warnf("conn: output is nil\n")
+				log.Warn().Msgf("conn: output is nil\n")
 				c.mu.Unlock()
 				return
 			}
 			if err != nil {
-				log.Warnf("write error: %s", err)
+				log.Warn().Msgf("write error: %s", err)
 				return
 			}
 		}

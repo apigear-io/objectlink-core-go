@@ -47,7 +47,7 @@ func (n *Node) Id() string {
 }
 
 func (n *Node) Close() error {
-	log.Infof("%s close\n", n.Id())
+	log.Info().Msgf("node %s: closing", n.Id())
 	n.Registry.DetachClientNode(n)
 	return nil
 }
@@ -57,23 +57,23 @@ func (n *Node) SetOutput(out io.WriteCloser) {
 }
 
 func (n *Node) SendMessage(msg core.Message) {
-	log.Infof("%s -> %v", n.Id(), msg)
+	log.Info().Msgf("%s -> %v", n.Id(), msg)
 	if n.output == nil {
-		log.Warnf("node: no input")
+		log.Warn().Msgf("node %s: no output", n.Id())
 		return
 	}
 	data, err := n.conv.ToData(msg)
 	if err != nil {
-		log.Warnf("error converting message")
+		log.Warn().Msgf("node %s: error converting message to data: %v", n.Id(), err)
 		return
 	}
 	if n.output == nil {
-		log.Warnf("no input set")
+		log.Warn().Msgf("node %s: no output", n.Id())
 		return
 	}
 	_, err = n.output.Write(data)
 	if err != nil {
-		log.Warnf("error writing message: %v", err)
+		log.Warn().Msgf("node %s: error writing message: %v", n.Id(), err)
 		return
 	}
 }
@@ -82,7 +82,7 @@ func (n *Node) SendMessage(msg core.Message) {
 // We handle init, property change, invoke reply, signal messages.
 func (n *Node) Write(data []byte) (int, error) {
 	msg, err := n.conv.FromData(data)
-	log.Infof("%s <- %v", n.Id(), msg)
+	log.Info().Msgf("%s <- %v", n.Id(), msg)
 	if err != nil {
 		return 0, err
 	}
@@ -108,7 +108,7 @@ func (n *Node) Write(data []byte) (int, error) {
 	case core.MsgInvokeReply:
 		// lookup the pending invoke and call the function
 		requestId, methodId, value := msg.AsInvokeReply()
-		log.Infof("node %s: invoke reply: %d %s %v", n.Id(), requestId, methodId, value)
+		log.Info().Msgf("invoke reply: %d %s %v", requestId, methodId, value)
 		fn, ok := n.pending[requestId]
 		if !ok {
 			return 0, fmt.Errorf("no pending invoke with id %d", requestId)
@@ -126,8 +126,8 @@ func (n *Node) Write(data []byte) (int, error) {
 		sink.OnSignal(signalId, args)
 	case core.MsgError:
 		// report the error
-		msgType, id, error := msg.AsError()
-		log.Infof("client node error: %d, %d, %s", msgType, id, error)
+		msgType, id, err := msg.AsError()
+		log.Info().Msgf("error: %d %d %s", msgType, id, err)
 	default:
 		return 0, fmt.Errorf("unknown type in client message: %#v", msg)
 	}

@@ -40,24 +40,24 @@ func NewCounter(notifier INotifier) ICounter {
 }
 
 func (impl *counterImpl) GetCount() int64 {
-	log.Infof("impl: get count: %d", impl.count)
+	log.Info().Msgf("impl: get count: %d", impl.count)
 	return impl.count
 }
 
 func (impl *counterImpl) SetCount(count int64) {
-	log.Infof("impl: set count: %d", count)
+	log.Info().Msgf("impl: set count: %d", count)
 	impl.count = count
 	impl.NotifyPropertyChanged("count", impl.count)
 }
 
 func (impl *counterImpl) Increment(step int64) {
-	log.Infof("impl: increment: %d", step)
+	log.Info().Msgf("impl: increment: %d", step)
 	impl.count += step
 	impl.NotifyPropertyChanged("count", impl.count)
 }
 
 func (impl *counterImpl) Decrement(step int64) {
-	log.Infof("impl: decrement: %d", step)
+	log.Info().Msgf("impl: decrement: %d", step)
 	impl.count -= step
 	impl.NotifyPropertyChanged("count", impl.count)
 }
@@ -83,7 +83,7 @@ func (s *CounterSource) ObjectId() string {
 }
 
 func (s *CounterSource) Invoke(methodId string, args core.Args) (core.Any, error) {
-	log.Infof("source: invoke: %s %v", methodId, args)
+	log.Info().Msgf("source: invoke: %s %v", methodId, args)
 	if s.impl == nil {
 		return nil, fmt.Errorf("no implementation")
 	}
@@ -100,7 +100,7 @@ func (s *CounterSource) Invoke(methodId string, args core.Args) (core.Any, error
 	}
 }
 func (s *CounterSource) SetProperty(propertyId string, value core.Any) error {
-	log.Infof("source: set property %s %v", propertyId, value)
+	log.Info().Msgf("source: set property %s %v", propertyId, value)
 	if s.impl == nil {
 		return fmt.Errorf("no implementation")
 	}
@@ -114,7 +114,7 @@ func (s *CounterSource) SetProperty(propertyId string, value core.Any) error {
 	return nil
 }
 func (s *CounterSource) Linked(objectId string, node *remote.Node) error {
-	log.Infof("source: linked %s %v", objectId, node)
+	log.Info().Msgf("source: linked %s %v", objectId, node)
 	if objectId != s.ObjectId() {
 		return fmt.Errorf("unexpected object id: %s", objectId)
 	}
@@ -126,7 +126,7 @@ func (s *CounterSource) Linked(objectId string, node *remote.Node) error {
 }
 
 func (s *CounterSource) CollectProperties() (core.KWArgs, error) {
-	log.Infof("source: collect properties")
+	log.Info().Msgf("source: collect properties")
 	if s.impl == nil {
 		return nil, fmt.Errorf("no implementation")
 	}
@@ -157,10 +157,10 @@ func main() {
 	}
 
 	http.HandleFunc("/ws", hub.ServeHTTP)
-	log.Infof("web socket server listening on %s/ws", *addr)
+	log.Info().Msgf("web socket server listening on %s/ws", *addr)
 	err := http.ListenAndServe(*addr, nil)
 	if err != nil {
-		log.Fatal("ListenAndServe: ", err)
+		log.Fatal().Err(err).Msg("failed to start web socket server")
 	}
 
 }

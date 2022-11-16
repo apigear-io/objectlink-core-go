@@ -28,7 +28,7 @@ var invoke = Command{
 				return err
 			}
 		}
-		log.Infof("invoke %s %#v", method, params)
+		log.Info().Msgf("invoke %s %#v", method, params)
 		node.InvokeRemote(method, params, func(arg client.InvokeReplyArg) {
 			fmt.Printf("%s: %v\n", arg.Identifier, arg.Value)
 		})

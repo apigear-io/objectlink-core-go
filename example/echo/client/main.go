@@ -58,22 +58,22 @@ func (s *CounterSink) SetCount(count int64) {
 }
 
 func (s *CounterSink) Increment(step int64) {
-	log.Infof("sink: increment %s: %d", s.ObjectId(), step)
+	log.Info().Msgf("sink: increment %s: %d", s.ObjectId(), step)
 	if s.node == nil {
-		log.Infof("no node")
+		log.Info().Msgf("no node")
 		return
 	}
 	s.node.InvokeRemote(core.MakeIdentifier(s.ObjectId(), "increment"), core.Args{step}, nil)
 }
 
 func (s *CounterSink) Decrement(step int64) {
-	log.Infof("sink: decrement %s: %d", s.ObjectId(), step)
+	log.Info().Msgf("sink: decrement %s: %d", s.ObjectId(), step)
 	if s.node == nil {
-		log.Infof("no node")
+		log.Info().Msgf("no node")
 		return
 	}
 	methodId := core.MakeIdentifier(s.ObjectId(), "decrement")
-	log.Infof("%s: %d", methodId, step)
+	log.Info().Msgf("%s: %d", methodId, step)
 	s.node.InvokeRemote(methodId, core.Args{step}, nil)
 }
 
