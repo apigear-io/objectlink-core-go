@@ -1,7 +1,7 @@
 package client
 
 import (
-	"olink/pkg/core"
+	"github.com/apigear-io/objectlink-core-go/olink/core"
 	"testing"
 )
 
@@ -37,7 +37,7 @@ func (s *CounterSink) OnRelease() {}
 
 func TestCounterSink(t *testing.T) {
 	sink := &CounterSink{}
-	writer := core.NewMockDataWriter()
+	writer := core.NewMockWriter()
 	registry := NewRegistry()
 	node := NewNode(registry, writer)
 

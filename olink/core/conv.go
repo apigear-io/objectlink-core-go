@@ -18,17 +18,17 @@ type MessageConverter struct {
 func (c *MessageConverter) ToData(msg Message) ([]byte, error) {
 	switch c.Format {
 	case FormatJson:
-		b, err := json.Marshal(msg)
-		return b, err
+		data, err := json.Marshal(msg)
+		return data, err
 	}
 	return nil, nil
 }
 
-func (c *MessageConverter) FromData(msg []byte) (Message, error) {
+func (c *MessageConverter) FromData(data []byte) (Message, error) {
 	switch c.Format {
 	case FormatJson:
 		var m Message
-		err := json.Unmarshal(msg, &m)
+		err := json.Unmarshal(data, &m)
 		return m, err
 	}
 	return nil, nil

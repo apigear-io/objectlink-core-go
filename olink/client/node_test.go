@@ -1,18 +1,17 @@
 package client
 
 import (
-	"encoding/json"
-	"olink/pkg/core"
+	"github.com/apigear-io/objectlink-core-go/olink/core"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
 
-func makeNodeAndSink(t *testing.T) (*Node, *MockSink, *core.MockDataWriter) {
+func makeNodeAndSink(t *testing.T) (*Node, *MockSink, *core.MockWriter) {
 	name := "demo.Counter"
 	sink := &MockSink{objectId: name}
 	registry := NewRegistry()
-	writer := core.NewMockDataWriter()
+	writer := core.NewMockWriter()
 	client := NewNode(registry, writer)
 	return client, sink, writer
 }
@@ -116,9 +115,7 @@ func TestHandleInit(t *testing.T) {
 	node.Registry.AddObjectSink(sink)
 	node.Registry.LinkClientNode(sink.ObjectId(), node)
 	msg := core.CreateInitMessage(sink.ObjectId(), core.Props{})
-	data, err := json.Marshal(msg)
-	assert.Nil(t, err, "should be nil")
-	node.HandleMessage(data)
+	node.HandleMessage(msg)
 	assert.Equal(t, 1, len(sink.events), "should have 1 event")
 	assert.Equal(t, msg, sink.events[0], "should be init event")
 }
@@ -129,9 +126,7 @@ func TestHandlePropertyChange(t *testing.T) {
 	node.Registry.LinkClientNode(sink.ObjectId(), node)
 	res := core.CreateResource(sink.ObjectId(), "prop")
 	msg := core.CreatePropertyChangeMessage(res, "value")
-	data, err := json.Marshal(msg)
-	assert.Nil(t, err, "should be nil")
-	node.HandleMessage(data)
+	node.HandleMessage(msg)
 	assert.Equal(t, 1, len(sink.events), "should have 1 event")
 	assert.Equal(t, msg, sink.events[0], "should be property event")
 }
@@ -146,8 +141,6 @@ func TestHandleMsgInvokeReply(t *testing.T) {
 		isCalled = true
 	})
 	msg := core.CreateInvokeReplyMessage(1, res, "value")
-	data, err := json.Marshal(msg)
-	assert.Nil(t, err, "should be nil")
-	node.HandleMessage(data)
+	node.HandleMessage(msg)
 	assert.True(t, isCalled, "should be called")
 }

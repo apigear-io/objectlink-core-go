@@ -16,7 +16,7 @@ func AsArgs(v Any) Args {
 	case []any:
 		return v
 	default:
-		return nil
+		return Args{}
 	}
 }
 
@@ -51,7 +51,7 @@ func AsProps(v Any) Props {
 	case map[string]any:
 		return v
 	default:
-		return nil
+		return Props{}
 	}
 }
 

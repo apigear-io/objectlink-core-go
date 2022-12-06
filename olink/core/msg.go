@@ -1,5 +1,9 @@
 package core
 
+import (
+	"encoding/json"
+)
+
 type MsgType int
 
 const (
@@ -140,4 +144,9 @@ func CreateErrorMessage(msgType MsgType, id int, error string) Message {
 		id,
 		error,
 	}
+}
+
+func (m *Message) FromData(data []byte) error {
+	err := json.Unmarshal(data, m)
+	return err
 }

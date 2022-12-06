@@ -2,8 +2,12 @@ package client
 
 import (
 	"fmt"
+	"github.com/apigear-io/objectlink-core-go/olink/core"
 	"log"
-	"olink/pkg/core"
+)
+
+var (
+	ErrNoWriter = fmt.Errorf("no writer")
 )
 
 type InvokeReplyArg struct {
@@ -18,10 +22,10 @@ type Node struct {
 	pending   map[int]InvokeReplyFunc
 	seqId     int
 	converter core.MessageConverter
-	writer    core.DataWriter
+	writer    core.MessageWriter
 }
 
-func NewNode(registry *Registry, writer core.DataWriter) *Node {
+func NewNode(registry *Registry, writer core.MessageWriter) *Node {
 	return &Node{
 		Registry: registry,
 		pending:  make(map[int]InvokeReplyFunc),
@@ -33,40 +37,34 @@ func NewNode(registry *Registry, writer core.DataWriter) *Node {
 	}
 }
 
-func (node *Node) WriteMessage(msg core.Message) {
-	data, err := node.converter.ToData(msg)
-	if err != nil {
-		fmt.Printf("error converting message")
+func (n *Node) WriteMessage(msg core.Message) {
+	if n.writer == nil {
+		log.Printf("no writer")
 		return
 	}
-	err = node.writer.WriteData(data)
+	err := n.writer.WriteMessage(msg)
 	if err != nil {
-		fmt.Printf("error writing message")
-		return
+		log.Printf("error writing message: %s", err)
 	}
 }
 
 // HandleMessage handles a message from the source.
 // We handle init, property change, invoke reply, signal messages.
-func (c *Node) HandleMessage(data []byte) error {
-	msg, err := c.converter.FromData(data)
-	if err != nil {
-		return err
-	}
+func (n *Node) HandleMessage(msg core.Message) error {
 	switch msg.Type() {
 	case core.MsgInit:
 		// get the sink and call the on init method
 		name, props := msg.AsInit()
-		sink := c.Registry.GetObjectSink(name)
+		sink := n.Registry.GetObjectSink(name)
 		if sink == nil {
 			return fmt.Errorf("no sink for %s", name)
 		}
-		sink.OnInit(name, props, c)
+		sink.OnInit(name, props, n)
 		return nil
 	case core.MsgPropertyChange:
 		// get the sink and call the on property change method
 		res, value := msg.AsPropertyChange()
-		sink := c.Registry.GetObjectSink(res.ObjectId())
+		sink := n.Registry.GetObjectSink(res.ObjectId())
 		if sink == nil {
 			return fmt.Errorf("no sink for %s", res)
 		}
@@ -74,16 +72,16 @@ func (c *Node) HandleMessage(data []byte) error {
 	case core.MsgInvokeReply:
 		// lookup the pending invoke and call the function
 		id, res, value := msg.AsInvokeReply()
-		f, ok := c.pending[id]
+		f, ok := n.pending[id]
 		if !ok {
 			return fmt.Errorf("no pending invoke with id %d", id)
 		}
-		delete(c.pending, id)
+		delete(n.pending, id)
 		f(InvokeReplyArg{res, value})
 	case core.MsgSignal:
 		// get the sink and call the on signal method
 		res, args := msg.AsSignal()
-		sink := c.Registry.GetObjectSink(res.ObjectId())
+		sink := n.Registry.GetObjectSink(res.ObjectId())
 		if sink == nil {
 			return fmt.Errorf("no sink for %s", res)
 		}

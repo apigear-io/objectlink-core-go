@@ -1,6 +1,6 @@
 package client
 
-import "olink/pkg/core"
+import "github.com/apigear-io/objectlink-core-go/olink/core"
 
 type IObjectSink interface {
 	ObjectId() string
