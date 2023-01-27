@@ -18,7 +18,7 @@ func init() {
 	if verbose {
 		level = zerolog.TraceLevel
 	}
-	logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
+	logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
 	zerolog.SetGlobalLevel(level)
 	logger = logger.Output(zerolog.ConsoleWriter{Out: os.Stderr})
 	if verbose {
