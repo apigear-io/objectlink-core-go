@@ -2,6 +2,7 @@ package remote
 
 import (
 	"fmt"
+	"sync"
 
 	"github.com/apigear-io/objectlink-core-go/log"
 
@@ -27,6 +28,7 @@ type SourceToNodeEntry struct {
 // A object source is registered in the registry and can be retrieved by the object id.
 // The source can have one or more remote nodes linked to it.
 type Registry struct {
+	sync.Mutex
 	id            string
 	entries       map[string]*SourceToNodeEntry
 	sourceFactory SourceFactory
@@ -101,11 +103,15 @@ func (r *Registry) DetachRemoteNode(node *Node) {
 // LinkRemoteNode adds a link between the object and the node.
 func (r *Registry) LinkRemoteNode(objectId string, node *Node) {
 	log.Info().Msgf("registry: link %s -> %s", objectId, node.Id())
+	r.Lock()
+	defer r.Unlock()
 	r.entry(objectId).nodes = append(r.entry(objectId).nodes, node)
 }
 
 // UnlinkRemoteNode removes the link between the object and the node.
 func (r *Registry) UnlinkRemoteNode(objectId string, node *Node) {
+	r.Lock()
+	defer r.Unlock()
 	for i, n := range r.entry(objectId).nodes {
 		if n == node {
 			r.entry(objectId).nodes = append(r.entry(objectId).nodes[:i], r.entry(objectId).nodes[i+1:]...)

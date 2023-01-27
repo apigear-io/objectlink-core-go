@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"net/http"
 
 	"github.com/apigear-io/objectlink-core-go/log"
@@ -25,17 +26,20 @@ type Hub struct {
 	register chan *Connection
 	// unregister peers
 	unregister chan *Connection
-	done       chan bool
+	ctx        context.Context
+	cancel     context.CancelFunc
 }
 
-func NewHub(registry *remote.Registry) *Hub {
+func NewHub(ctx context.Context, registry *remote.Registry) *Hub {
+	ctx, cancel := context.WithCancel(ctx)
 	h := &Hub{
 		registry:   registry,
 		broadcast:  make(chan []byte),
 		register:   make(chan *Connection),
 		unregister: make(chan *Connection),
 		conns:      make([]*Connection, 0),
-		done:       make(chan bool),
+		ctx:        ctx,
+		cancel:     cancel,
 	}
 	go h.run()
 	return h
@@ -69,7 +73,7 @@ func (h *Hub) run() {
 					h.unregister <- conn
 				}
 			}
-		case <-h.done:
+		case <-h.ctx.Done():
 			return
 		}
 	}
@@ -90,5 +94,5 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Hub) Close() {
-	h.done <- true
+	h.cancel()
 }

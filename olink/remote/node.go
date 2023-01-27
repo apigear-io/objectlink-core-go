@@ -61,7 +61,10 @@ func (n *Node) RemoveNode() {
 }
 
 func (n *Node) Close() error {
-	n.cancel()
+	n.Lock()
+	cancel := n.cancel
+	n.Unlock()
+	cancel()
 	return nil
 }
 

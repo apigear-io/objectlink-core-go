@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"net/http"
@@ -149,7 +150,9 @@ func (s *CounterSource) NotifySignal(name string, args core.Args) {
 func main() {
 	flag.Parse()
 	registry := remote.NewRegistry()
-	hub := ws.NewHub(registry)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	hub := ws.NewHub(ctx, registry)
 	{
 		source := NewCounterSource()
 		registry.AddObjectSource(source)
@@ -163,5 +166,4 @@ func main() {
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to start web socket server")
 	}
-
 }
