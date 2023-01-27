@@ -9,11 +9,11 @@ import (
 // ObjectId: <module-name>.<object-name>
 // Identifier: <module-name>.<object-name>/<member>
 
-func ToObjectId(id string) string {
+func SymbolIdToObjectId(id string) string {
 	return strings.Split(id, "/")[0]
 }
 
-func ToMember(id string) string {
+func SymbolIdToMember(id string) string {
 	parts := strings.Split(id, "/")
 	switch len(parts) {
 	case 1:
@@ -25,7 +25,7 @@ func ToMember(id string) string {
 	}
 }
 
-func ToParts(id string) (string, string) {
+func SymbolIdToParts(id string) (string, string) {
 	parts := strings.Split(id, "/")
 	switch len(parts) {
 	case 1:
@@ -37,6 +37,6 @@ func ToParts(id string) (string, string) {
 	}
 }
 
-func MakeIdentifier(id string, member string) string {
+func MakeSymbolId(id string, member string) string {
 	return fmt.Sprintf("%s/%s", id, member)
 }

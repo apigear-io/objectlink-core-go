@@ -88,7 +88,7 @@ func (s *CounterSource) Invoke(methodId string, args core.Args) (core.Any, error
 	if s.impl == nil {
 		return nil, fmt.Errorf("no implementation")
 	}
-	name := core.ToMember(methodId)
+	name := core.SymbolIdToMember(methodId)
 	switch name {
 	case "increment":
 		s.impl.Increment(args[0].(int64))
@@ -105,7 +105,7 @@ func (s *CounterSource) SetProperty(propertyId string, value core.Any) error {
 	if s.impl == nil {
 		return fmt.Errorf("no implementation")
 	}
-	name := core.ToMember(propertyId)
+	name := core.SymbolIdToMember(propertyId)
 	switch name {
 	case "count":
 		s.impl.SetCount(value.(int64))
@@ -137,12 +137,12 @@ func (s *CounterSource) CollectProperties() (core.KWArgs, error) {
 }
 
 func (s *CounterSource) NotifyPropertyChanged(name string, value core.Any) {
-	propertyId := core.MakeIdentifier(s.ObjectId(), name)
+	propertyId := core.MakeSymbolId(s.ObjectId(), name)
 	s.node.NotifyPropertyChange(propertyId, value)
 }
 
 func (s *CounterSource) NotifySignal(name string, args core.Args) {
-	signalId := core.MakeIdentifier(s.ObjectId(), name)
+	signalId := core.MakeSymbolId(s.ObjectId(), name)
 	s.node.NotifySignal(signalId, args)
 }
 

@@ -49,7 +49,7 @@ func (n *Node) Id() string {
 }
 
 func (n *Node) Close() error {
-	log.Info().Msgf("node %s: closing", n.Id())
+	log.Debug().Msgf("node %s: closing", n.Id())
 	n.Registry.DetachClientNode(n)
 	return nil
 }
@@ -59,7 +59,7 @@ func (n *Node) SetOutput(out io.WriteCloser) {
 }
 
 func (n *Node) SendMessage(msg core.Message) {
-	log.Info().Msgf("%s -> %v", n.Id(), msg)
+	log.Debug().Msgf("%s -> %v", n.Id(), msg)
 	if n.output == nil {
 		log.Warn().Msgf("node %s: no output", n.Id())
 		return
@@ -84,7 +84,7 @@ func (n *Node) SendMessage(msg core.Message) {
 // We handle init, property change, invoke reply, signal messages.
 func (n *Node) Write(data []byte) (int, error) {
 	msg, err := n.conv.FromData(data)
-	log.Info().Msgf("%s <- %v", n.Id(), msg)
+	log.Debug().Msgf("%s <- %v", n.Id(), msg)
 	if err != nil {
 		return 0, err
 	}
@@ -101,7 +101,7 @@ func (n *Node) Write(data []byte) (int, error) {
 	case core.MsgPropertyChange:
 		// get the sink and call the on property change method
 		propertyId, value := msg.AsPropertyChange()
-		objectId := core.ToObjectId(propertyId)
+		objectId := core.SymbolIdToObjectId(propertyId)
 		sink := n.Registry.ObjectSink(objectId)
 		if sink == nil {
 			return 0, fmt.Errorf("no sink for %s", propertyId)
@@ -110,7 +110,7 @@ func (n *Node) Write(data []byte) (int, error) {
 	case core.MsgInvokeReply:
 		// lookup the pending invoke and call the function
 		requestId, methodId, value := msg.AsInvokeReply()
-		log.Info().Msgf("invoke reply: %d %s %v", requestId, methodId, value)
+		log.Debug().Msgf("invoke reply: %d %s %v", requestId, methodId, value)
 		fn, ok := n.pending[requestId]
 		if !ok {
 			return 0, fmt.Errorf("no pending invoke with id %d", requestId)
@@ -120,7 +120,7 @@ func (n *Node) Write(data []byte) (int, error) {
 	case core.MsgSignal:
 		// get the sink and call the on signal method
 		signalId, args := msg.AsSignal()
-		objectId := core.ToObjectId(signalId)
+		objectId := core.SymbolIdToObjectId(signalId)
 		sink := n.Registry.ObjectSink(objectId)
 		if sink == nil {
 			return 0, fmt.Errorf("no sink for %s", signalId)

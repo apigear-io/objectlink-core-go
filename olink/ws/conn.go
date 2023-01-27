@@ -1,6 +1,7 @@
 package ws
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"sync"
@@ -28,76 +29,64 @@ func nextConnId() string {
 	return fmt.Sprintf("ws%d", connId)
 }
 
-type Connection struct {
-	id        string
-	socket    *websocket.Conn
-	input     chan []byte
-	done      chan struct{}
-	output    io.WriteCloser
-	OnClosing func()
-	mu        sync.Mutex
-}
-
 func Dial(url string) (*Connection, error) {
 	log.Debug().Msgf("dial: %s", url)
 	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
 	if err != nil {
 		return nil, err
 	}
-	log.Debug().Msgf("connected to: %s\n", url)
+	log.Debug().Msgf("connected to: %s", url)
 	conn := NewConnection(ws)
 	return conn, nil
 }
 
+type Connection struct {
+	sync.Mutex
+	id        string
+	socket    *websocket.Conn
+	in        chan []byte
+	ctx       context.Context
+	ctxCancel context.CancelFunc
+	out       io.WriteCloser
+	onClosing func()
+}
+
 func NewConnection(socket *websocket.Conn) *Connection {
+	ctx, cancel := context.WithCancel(context.Background())
 	p := &Connection{
-		id:     nextConnId(),
-		socket: socket,
-		input:  make(chan []byte),
-		done:   make(chan struct{}),
+		id:        nextConnId(),
+		socket:    socket,
+		in:        make(chan []byte),
+		ctx:       ctx,
+		ctxCancel: cancel,
 	}
 	socket.SetReadLimit(maxMessageSize)
 	socket.SetPongHandler(func(string) error {
 		deadline := time.Now().Add(pongWait)
-		log.Debug().Msgf("conn: handle pong %v\n", deadline)
+		log.Debug().Msgf("conn: handle pong %v", deadline)
 		return socket.SetReadDeadline(deadline)
 	})
 	socket.SetCloseHandler(func(code int, text string) error {
-		// close connection and let write pump handle it
 		p.Close()
 		return nil
 	})
-	// SEE /Users/jryannel/work/apigear-go/objectlink-core-go
-
-	go p.ReadPump()
 	go p.WritePump()
+	go p.ReadPump()
 	return p
 }
 
+func (c *Connection) OnClosing(onClosing func()) {
+	c.onClosing = onClosing
+}
+
+func (c *Connection) EmitClosing() {
+	if c.onClosing != nil {
+		c.onClosing()
+	}
+}
+
 func (c *Connection) Close() error {
-	if c.done == nil {
-		return nil
-	}
-	log.Info().Msgf("%s close\n", c.Id())
-	if c.output != nil {
-		err := c.output.Close()
-		if err != nil {
-			log.Warn().Msgf("%s close output error: %v\n", c.Id(), err)
-		}
-	}
-	log.Debug().Msgf("%s: close done\n", c.Id())
-	// close done channel to stop write pump
-	close(c.done)
-	c.done = nil
-	c.socket.SetWriteDeadline(time.Now().Add(pongWait))
-	err := c.socket.WriteMessage(websocket.CloseMessage, websocket.FormatCloseMessage(websocket.CloseNormalClosure, ""))
-	if err != nil {
-		log.Warn().Msgf("%s close error: %v\n", c.Id(), err)
-	}
-	c.socket.Close()
-	if c.OnClosing != nil {
-		c.OnClosing()
-	}
+	c.ctxCancel()
 	return nil
 }
 
@@ -110,45 +99,32 @@ func (c *Connection) Url() string {
 }
 
 func (c *Connection) SetOutput(out io.WriteCloser) {
-	c.mu.Lock()
-	defer c.mu.Unlock()
-	c.output = out
-}
-
-func (c *Connection) Write(data []byte) (int, error) {
-	log.Debug().Msgf("conn: inputC<- %s", data)
-	c.input <- data
-	return len(data), nil
+	c.Lock()
+	defer c.Unlock()
+	c.out = out
 }
 
 func (c *Connection) WritePump() {
-	log.Debug().Msgf("%s: start write pump\n", c.Id())
 	ticker := time.NewTicker(pingPeriod)
-	defer func() {
-		log.Debug().Msgf("%s: stop write pump\n", c.Id())
-		ticker.Stop()
-		c.Close()
-	}()
+	defer c.Close()
 	for {
 		select {
-		case <-c.done:
-			log.Debug().Msgf("%s: write pump done\n", c.Id())
-			// end go routine
+		case <-c.ctx.Done():
+			if c.out != nil {
+				c.out.Close()
+			}
+			c.socket.Close()
+			c.EmitClosing()
 			return
-		case data := <-c.input:
-			// send message from protocol handler
-			log.Debug().Msgf("conn: %s <-inputC %s\n", c.Id(), data)
-			err := c.socket.WriteMessage(websocket.TextMessage, data)
+		case t := <-ticker.C:
+			deadline := t.Add(pongWait)
+			err := c.socket.WriteControl(websocket.PingMessage, []byte{}, deadline)
 			if err != nil {
-				log.Warn().Msgf("write error: %s", err)
 				return
 			}
-		case t := <-ticker.C:
-			// send ping message
-			log.Debug().Msgf("conn: <-ticker %s\n", t)
-			err := c.socket.WriteMessage(websocket.PingMessage, []byte(t.String()))
+		case bytes := <-c.in:
+			err := c.socket.WriteMessage(websocket.TextMessage, bytes)
 			if err != nil {
-				log.Warn().Msgf("write error: %s", err)
 				return
 			}
 		}
@@ -156,16 +132,10 @@ func (c *Connection) WritePump() {
 }
 
 func (c *Connection) ReadPump() {
-	log.Debug().Msgf("%s: start read pump\n", c.Id())
-	defer func() {
-		log.Debug().Msgf("%s: stop read pump\n", c.Id())
-		// close connection if we stop reading
-		c.Close()
-	}()
+	defer c.Close()
 	for {
 		select {
-		case <-c.done:
-			log.Debug().Msgf("conn: <-done\n")
+		case <-c.ctx.Done():
 			return
 		default:
 			c.socket.SetReadDeadline(time.Now().Add(pongWait))
@@ -173,19 +143,21 @@ func (c *Connection) ReadPump() {
 			if err != nil {
 				return
 			}
-			c.mu.Lock()
-			if c.output != nil {
-				_, err = c.output.Write(bytes)
-				c.mu.Unlock()
-			} else {
-				log.Warn().Msgf("conn: output is nil\n")
-				c.mu.Unlock()
-				return
-			}
-			if err != nil {
-				log.Warn().Msgf("write error: %s", err)
-				return
+			c.Lock()
+			out := c.out
+			c.Unlock()
+			if out != nil {
+				_, err = out.Write(bytes)
+				if err != nil {
+					log.Debug().Msgf("conn: write error: %v", err)
+					return
+				}
 			}
 		}
 	}
+}
+
+func (c *Connection) Write(bytes []byte) (int, error) {
+	c.in <- bytes
+	return len(bytes), nil
 }

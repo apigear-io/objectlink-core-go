@@ -6,6 +6,8 @@ import (
 	"github.com/apigear-io/objectlink-core-go/log"
 )
 
+type SinkFactory func(objectId string) IObjectSink
+
 type SinkToClientEntry struct {
 	sink IObjectSink
 	node *Node
@@ -26,6 +28,7 @@ func nextRegistryId() string {
 type Registry struct {
 	id      string
 	entries map[string]*SinkToClientEntry
+	factory SinkFactory
 }
 
 func NewRegistry() *Registry {
@@ -39,16 +42,20 @@ func (r *Registry) Id() string {
 	return r.id
 }
 
+// SetSinkFactory sets the sink factory.
+func (r *Registry) SetSinkFactory(factory SinkFactory) {
+	r.factory = factory
+}
+
 // attach client node to registry
 func (r *Registry) AttachClientNode(node *Node) {
 }
 
 // detach client node from registry
 func (r *Registry) DetachClientNode(node *Node) {
-	log.Info().Msgf("detach client node %s", node.Id())
 	for _, e := range r.entries {
 		if e.node == node {
-			log.Info().Msgf("unlink client node %s from object %s", node.Id(), e.sink.ObjectId())
+			log.Debug().Msgf("unlink client node %s from object %s", node.Id(), e.sink.ObjectId())
 			e.node = nil
 		}
 	}
@@ -56,7 +63,7 @@ func (r *Registry) DetachClientNode(node *Node) {
 
 func (r *Registry) LinkClientNode(objectId string, node *Node) {
 	if entry := r.Entry(objectId); entry != nil {
-		log.Info().Msgf("link client node %s to object %s", node.Id(), objectId)
+		log.Debug().Msgf("link client node %s to object %s", node.Id(), objectId)
 		entry.node = node
 	} else {
 		log.Warn().Msgf("object %s not found", objectId)
@@ -64,10 +71,12 @@ func (r *Registry) LinkClientNode(objectId string, node *Node) {
 }
 
 func (r *Registry) UnlinkClientNode(objectId string) {
+	log.Debug().Msgf("unlink client node from object %s", objectId)
 	r.Entry(objectId).node = nil
 }
 
 func (r *Registry) AddObjectSink(sink IObjectSink) {
+	log.Info().Msgf("add object sink %s", sink.ObjectId())
 	r.Entry(sink.ObjectId()).sink = sink
 }
 
@@ -86,7 +95,12 @@ func (r *Registry) RemoveObjectSink(objectId string) {
 
 // get object sink by name
 func (r *Registry) ObjectSink(objectId string) IObjectSink {
-	return r.Entry(objectId).sink
+	s := r.Entry(objectId).sink
+	if s == nil && r.factory != nil {
+		s = r.factory(objectId)
+		r.Entry(objectId).sink = s
+	}
+	return s
 }
 
 func (r *Registry) Node(objectId string) *Node {

@@ -25,6 +25,7 @@ type Hub struct {
 	register chan *Connection
 	// unregister peers
 	unregister chan *Connection
+	done       chan bool
 }
 
 func NewHub(registry *remote.Registry) *Hub {
@@ -34,6 +35,7 @@ func NewHub(registry *remote.Registry) *Hub {
 		register:   make(chan *Connection),
 		unregister: make(chan *Connection),
 		conns:      make([]*Connection, 0),
+		done:       make(chan bool),
 	}
 	go h.run()
 	return h
@@ -43,13 +45,13 @@ func (h *Hub) run() {
 	for {
 		select {
 		case conn := <-h.register:
-			log.Info().Msgf("hub: register: %s\n", conn.Id())
+			log.Info().Msgf("hub: register: %s", conn.Id())
 			node := remote.NewNode(h.registry)
-			node.SetOutput(conn)
 			conn.SetOutput(node)
+			node.SetOutput(conn)
 			h.conns = append(h.conns, conn)
 		case conn := <-h.unregister:
-			log.Info().Msgf("hub: unregister: %s\n", conn.Id())
+			log.Info().Msgf("hub: unregister: %s", conn.Id())
 			for i, c := range h.conns {
 				if c == conn {
 					h.conns = append(h.conns[:i], h.conns[i+1:]...)
@@ -58,15 +60,17 @@ func (h *Hub) run() {
 				}
 			}
 		case msg := <-h.broadcast:
-			log.Info().Msgf("hub: broadcast: %s\n", msg)
+			log.Info().Msgf("hub: broadcast: %s", msg)
 			for _, conn := range h.conns {
 				select {
-				case conn.input <- msg:
+				case conn.in <- msg:
 				default:
-					close(conn.input)
+					close(conn.in)
 					h.unregister <- conn
 				}
 			}
+		case <-h.done:
+			return
 		}
 	}
 }
@@ -77,10 +81,14 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		log.Info().Err(err).Msg("error upgrade http call to websocket")
 		return
 	}
-	log.Info().Msgf("new connection: %s\n", socket.RemoteAddr())
+	log.Info().Msgf("new connection: %s", socket.RemoteAddr())
 	conn := NewConnection(socket)
-	conn.OnClosing = func() {
+	conn.OnClosing(func() {
 		h.unregister <- conn
-	}
+	})
 	h.register <- conn
+}
+
+func (h *Hub) Close() {
+	h.done <- true
 }

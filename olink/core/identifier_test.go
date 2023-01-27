@@ -7,30 +7,30 @@ import (
 )
 
 func TestToIdentifier(t *testing.T) {
-	assert.Equal(t, "demo.Counter", ToObjectId("demo.Counter/member/member2"))
-	assert.Equal(t, "demo.Counter", ToObjectId("demo.Counter/member"))
-	assert.Equal(t, "demo.Counter", ToObjectId("demo.Counter"))
-	assert.Equal(t, "", ToObjectId(""))
+	assert.Equal(t, "demo.Counter", SymbolIdToObjectId("demo.Counter/member/member2"))
+	assert.Equal(t, "demo.Counter", SymbolIdToObjectId("demo.Counter/member"))
+	assert.Equal(t, "demo.Counter", SymbolIdToObjectId("demo.Counter"))
+	assert.Equal(t, "", SymbolIdToObjectId(""))
 }
 
 func TestToMember(t *testing.T) {
-	assert.Equal(t, "", ToMember("demo.Counter/member/member2"))
-	assert.Equal(t, "member", ToMember("demo.Counter/member"))
-	assert.Equal(t, "", ToMember("demo.Counter"))
-	assert.Equal(t, "", ToMember(""))
+	assert.Equal(t, "", SymbolIdToMember("demo.Counter/member/member2"))
+	assert.Equal(t, "member", SymbolIdToMember("demo.Counter/member"))
+	assert.Equal(t, "", SymbolIdToMember("demo.Counter"))
+	assert.Equal(t, "", SymbolIdToMember(""))
 }
 
 func TestToParts(t *testing.T) {
-	part0, part1 := ToParts("demo.Counter/member/member2")
+	part0, part1 := SymbolIdToParts("demo.Counter/member/member2")
 	assert.Equal(t, "demo.Counter", part0)
 	assert.Equal(t, "", part1)
-	part0, part1 = ToParts("demo.Counter/member")
+	part0, part1 = SymbolIdToParts("demo.Counter/member")
 	assert.Equal(t, "demo.Counter", part0)
 	assert.Equal(t, "member", part1)
-	part0, part1 = ToParts("demo.Counter")
+	part0, part1 = SymbolIdToParts("demo.Counter")
 	assert.Equal(t, "demo.Counter", part0)
 	assert.Equal(t, "", part1)
-	part0, part1 = ToParts("")
+	part0, part1 = SymbolIdToParts("")
 	assert.Equal(t, "", part0)
 	assert.Equal(t, "", part1)
 }

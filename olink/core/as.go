@@ -35,7 +35,7 @@ func AsFloat(v Any) float64 {
 	case json.Number:
 		i, err := v.Float64()
 		if err != nil {
-			log.Warn().Msgf("error: %v\n", err)
+			log.Warn().Msgf("error: %v", err)
 			return 0
 		}
 		return i
@@ -56,7 +56,7 @@ func AsInt(v any) int64 {
 	case json.Number:
 		i, err := v.Int64()
 		if err != nil {
-			log.Warn().Msgf("error: %v\n", err)
+			log.Warn().Msgf("error: %v", err)
 			return 0
 		}
 		return i

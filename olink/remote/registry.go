@@ -8,6 +8,8 @@ import (
 	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
+type SourceFactory func(objectId string) IObjectSource
+
 var registryId = 0
 
 func nextRegistryId() string {
@@ -25,8 +27,9 @@ type SourceToNodeEntry struct {
 // A object source is registered in the registry and can be retrieved by the object id.
 // The source can have one or more remote nodes linked to it.
 type Registry struct {
-	id      string
-	entries map[string]*SourceToNodeEntry
+	id            string
+	entries       map[string]*SourceToNodeEntry
+	sourceFactory SourceFactory
 }
 
 func NewRegistry() *Registry {
@@ -38,6 +41,11 @@ func NewRegistry() *Registry {
 
 func (r *Registry) Id() string {
 	return r.id
+}
+
+// SetSourceFactory sets the source factory.
+func (r *Registry) SetSourceFactory(factory SourceFactory) {
+	r.sourceFactory = factory
 }
 
 // AddObjectSource adds the object source to the registry.
@@ -52,7 +60,14 @@ func (r *Registry) RemoveObjectSource(source IObjectSource) {
 
 // GetObjectSource returns the object source by name.
 func (r *Registry) GetObjectSource(objectId string) IObjectSource {
-	return r.entry(objectId).source
+	s := r.entry(objectId).source
+	if s == nil && r.sourceFactory != nil {
+		s = r.sourceFactory(objectId)
+		if s != nil {
+			r.AddObjectSource(s)
+		}
+	}
+	return s
 }
 
 // Checks if the object is registered.

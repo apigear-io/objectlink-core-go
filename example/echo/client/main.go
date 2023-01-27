@@ -54,7 +54,7 @@ func (s *CounterSink) ObjectId() string {
 
 func (s *CounterSink) SetCount(count int64) {
 	if s.node != nil {
-		propertyId := core.MakeIdentifier(s.ObjectId(), "count")
+		propertyId := core.MakeSymbolId(s.ObjectId(), "count")
 		s.node.SetRemoteProperty(propertyId, s.count)
 	}
 }
@@ -65,7 +65,7 @@ func (s *CounterSink) Increment(step int64) {
 		log.Info().Msgf("no node")
 		return
 	}
-	s.node.InvokeRemote(core.MakeIdentifier(s.ObjectId(), "increment"), core.Args{step}, nil)
+	s.node.InvokeRemote(core.MakeSymbolId(s.ObjectId(), "increment"), core.Args{step}, nil)
 }
 
 func (s *CounterSink) Decrement(step int64) {
@@ -74,7 +74,7 @@ func (s *CounterSink) Decrement(step int64) {
 		log.Info().Msgf("no node")
 		return
 	}
-	methodId := core.MakeIdentifier(s.ObjectId(), "decrement")
+	methodId := core.MakeSymbolId(s.ObjectId(), "decrement")
 	log.Info().Msgf("%s: %d", methodId, step)
 	s.node.InvokeRemote(methodId, core.Args{step}, nil)
 }
@@ -91,7 +91,7 @@ func (s *CounterSink) OnInit(objectId string, props core.KWArgs, node *client.No
 
 func (s *CounterSink) OnPropertyChange(propertyId string, value core.Any) {
 	fmt.Printf("on property change: %s %v\n", propertyId, value)
-	name := core.ToMember(propertyId)
+	name := core.SymbolIdToMember(propertyId)
 	switch name {
 	case "count":
 		s.count = core.AsInt(value)

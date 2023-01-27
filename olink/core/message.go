@@ -1,6 +1,62 @@
 package core
 
+import (
+	"fmt"
+)
+
 type MsgType int64
+
+func (t MsgType) String() string {
+	switch t {
+	case MsgUnknown:
+		return "unknown"
+	case MsgLink:
+		return "link"
+	case MsgInit:
+		return "init"
+	case MsgUnlink:
+		return "unlink"
+	case MsgSetProperty:
+		return "set"
+	case MsgPropertyChange:
+		return "change"
+	case MsgInvoke:
+		return "invoke"
+	case MsgInvokeReply:
+		return "reply"
+	case MsgSignal:
+		return "signal"
+	case MsgError:
+		return "error"
+	}
+	return fmt.Sprintf("unknown(%d)", t)
+}
+
+func MsgTypeFromString(s string) MsgType {
+	switch s {
+	case "unknown":
+		return MsgUnknown
+	case "link":
+		return MsgLink
+	case "init":
+		return MsgInit
+	case "unlink":
+		return MsgUnlink
+	case "set":
+		return MsgSetProperty
+	case "change":
+		return MsgPropertyChange
+	case "invoke":
+		return MsgInvoke
+	case "reply":
+		return MsgInvokeReply
+	case "signal":
+		return MsgSignal
+	case "error":
+		return MsgError
+	}
+	return MsgUnknown
+}
 
 const (
 	MsgUnknown        MsgType = 0
@@ -16,6 +72,16 @@ const (
 )
 
 type Args []any
+
+func AsKwArgs(a Args) KWArgs {
+	kwargs := make(KWArgs)
+	for i, v := range a {
+		name := fmt.Sprintf("arg%d", i)
+		kwargs[name] = v
+	}
+	return kwargs
+}
+
 type KWArgs map[string]any
 
 func (a KWArgs) Keys() []string {
@@ -34,6 +100,10 @@ type Message []any
 
 func (m Message) Type() MsgType {
 	return AsMsgType(m[0])
+}
+
+func (m Message) StringType() string {
+	return AsString(m[0])
 }
 
 // AsInit returns the name and props of the init message

@@ -21,7 +21,7 @@ func (s *CounterSink) OnSignal(signalId string, args core.Args) {
 
 func (s *CounterSink) OnPropertyChange(propertyId string, value core.Any) {
 	s.events = append(s.events, core.MakePropertyChangeMessage(propertyId, value))
-	if core.ToMember(propertyId) == "count" {
+	if core.SymbolIdToMember(propertyId) == "count" {
 		s.Count = value.(int)
 	}
 }
@@ -51,6 +51,6 @@ func TestCounterSink(t *testing.T) {
 	registry.AddObjectSink(sink)
 	// subscribe to remote source events
 	node.LinkRemoteNode(sink.ObjectId())
-	res := core.MakeIdentifier(sink.ObjectId(), "count")
+	res := core.MakeSymbolId(sink.ObjectId(), "count")
 	node.SetRemoteProperty(res, 0)
 }

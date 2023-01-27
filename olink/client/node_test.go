@@ -65,7 +65,7 @@ func TestSetRemoteProperty(t *testing.T) {
 	assert.Equal(t, 1, len(writer.Messages), "should have 1 message")
 	assert.Equal(t, sink.ObjectId(), writer.Messages[0].AsLink(), "should be init message")
 	// set property
-	propertyId := core.MakeIdentifier(sink.ObjectId(), "prop")
+	propertyId := core.MakeSymbolId(sink.ObjectId(), "prop")
 	node.SetRemoteProperty(propertyId, "value")
 	// writer should have one property message
 	assert.Equal(t, 2, len(writer.Messages), "should have 2 message")
@@ -86,7 +86,7 @@ func TestInvokeRemote(t *testing.T) {
 	assert.Equal(t, 1, len(writer.Messages), "should have 1 message")
 	assert.Equal(t, sink.ObjectId(), writer.Messages[0].AsLink(), "should be init message")
 	// invoke remote
-	methodId := core.MakeIdentifier(sink.ObjectId(), "method")
+	methodId := core.MakeSymbolId(sink.ObjectId(), "method")
 	node.InvokeRemote(methodId, core.Args{}, func(args InvokeReplyArg) {})
 	// writer should have one invoke message
 	assert.Equal(t, 2, len(writer.Messages), "should have 2 message")
@@ -129,7 +129,7 @@ func TestHandlePropertyChange(t *testing.T) {
 	node, sink, _ := makeNodeAndSink(t)
 	node.Registry.AddObjectSink(sink)
 	node.Registry.LinkClientNode(sink.ObjectId(), node)
-	propertyId := core.MakeIdentifier(sink.ObjectId(), "prop")
+	propertyId := core.MakeSymbolId(sink.ObjectId(), "prop")
 	msg := core.MakePropertyChangeMessage(propertyId, "value")
 	data, err := json.Marshal(msg)
 	assert.Nil(t, err, "should be nil")
@@ -143,7 +143,7 @@ func TestHandleMsgInvokeReply(t *testing.T) {
 	node.Registry.AddObjectSink(sink)
 	node.Registry.LinkClientNode(sink.ObjectId(), node)
 	isCalled := false
-	methodId := core.MakeIdentifier(sink.ObjectId(), "hello")
+	methodId := core.MakeSymbolId(sink.ObjectId(), "hello")
 	node.InvokeRemote(methodId, core.Args{}, func(args InvokeReplyArg) {
 		isCalled = true
 	})

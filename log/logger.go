@@ -6,34 +6,46 @@ import (
 	"github.com/rs/zerolog"
 )
 
-var log zerolog.Logger
+var logger zerolog.Logger
 
 func init() {
-	log = zerolog.New(os.Stderr).With().Timestamp().Logger()
-	zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	log = log.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	debug := os.Getenv("DEBUG") == "1"
+	verbose := os.Getenv("VERBOSE") == "2"
+	level := zerolog.InfoLevel
+	if debug || verbose {
+		level = zerolog.DebugLevel
+	}
+	if verbose {
+		level = zerolog.TraceLevel
+	}
+	logger = zerolog.New(os.Stdout).With().Timestamp().Logger()
+	zerolog.SetGlobalLevel(level)
+	logger = logger.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	if verbose {
+		logger = logger.With().Caller().Logger()
+	}
 }
 
 func Debug() *zerolog.Event {
-	return log.Debug()
+	return logger.Debug()
 }
 
 func Info() *zerolog.Event {
-	return log.Info()
+	return logger.Info()
 }
 
 func Warn() *zerolog.Event {
-	return log.Warn()
+	return logger.Warn()
 }
 
 func Error() *zerolog.Event {
-	return log.Error()
+	return logger.Error()
 }
 
 func Fatal() *zerolog.Event {
-	return log.Fatal()
+	return logger.Fatal()
 }
 
 func Panic() *zerolog.Event {
-	return log.Panic()
+	return logger.Panic()
 }
