@@ -10,17 +10,16 @@ var logger zerolog.Logger
 
 func init() {
 	debug := os.Getenv("DEBUG") == "1"
-	verbose := os.Getenv("VERBOSE") == "2"
+	verbose := os.Getenv("DEBUG") == "2"
 	level := zerolog.InfoLevel
-	if debug || verbose {
+	if debug {
 		level = zerolog.DebugLevel
 	}
 	if verbose {
 		level = zerolog.TraceLevel
 	}
-	logger = zerolog.New(os.Stderr).With().Timestamp().Logger()
-	zerolog.SetGlobalLevel(level)
-	logger = logger.Output(zerolog.ConsoleWriter{Out: os.Stderr})
+	console := zerolog.ConsoleWriter{Out: os.Stdout, TimeFormat: "15:04:05"}
+	logger = zerolog.New(console).With().Timestamp().Logger().Level(level)
 	if verbose {
 		logger = logger.With().Caller().Logger()
 	}
