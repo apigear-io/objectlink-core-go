@@ -11,6 +11,10 @@ var disconnect = Command{
 		}
 		conn.Close()
 		conn = nil
+		if node != nil {
+			node.Close()
+			node = nil
+		}
 		fmt.Println("disconnected")
 		return nil
 	},

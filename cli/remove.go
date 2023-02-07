@@ -10,6 +10,9 @@ var remove = Command{
 			return fmt.Errorf("missing object sink")
 		}
 		objectId := args[1]
+		if registry == nil {
+			return fmt.Errorf("no registry")
+		}
 		if registry.ObjectSink(objectId) == nil {
 			fmt.Printf("object sink %s not found\n", objectId)
 		} else {

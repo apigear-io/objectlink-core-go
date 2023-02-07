@@ -135,8 +135,18 @@ func (r *Registry) removeEntry(objectId string) {
 	delete(r.entries, objectId)
 }
 
-func (e *Registry) NotifyPropertyChange(objectId string, value core.Any) {
+func (e *Registry) NotifyPropertyChange(objectId string, kwargs core.KWArgs) {
 	for _, n := range e.entry(objectId).nodes {
-		n.NotifyPropertyChange(objectId, value)
+		for name, value := range kwargs {
+			propertyId := core.MakeSymbolId(objectId, name)
+			n.NotifyPropertyChange(propertyId, value)
+		}
+	}
+}
+
+func (e *Registry) NotifySignal(objectId string, name string, args core.Args) {
+	signalId := core.MakeSymbolId(objectId, name)
+	for _, n := range e.entry(objectId).nodes {
+		n.NotifySignal(signalId, args)
 	}
 }

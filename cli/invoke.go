@@ -12,10 +12,13 @@ import (
 
 var invoke = Command{
 	Usage: "invoke <methodId> [<arg>]",
-	Names: []string{"i", "invoke"},
+	Names: []string{"i", "inv", "invoke"},
 	Exec: func(args []string) error {
 		if conn == nil {
 			return fmt.Errorf("not connected")
+		}
+		if node == nil {
+			return fmt.Errorf("no node")
 		}
 		if len(args) < 2 {
 			return fmt.Errorf("missing method")
