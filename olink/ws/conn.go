@@ -20,6 +20,7 @@ const (
 	pongWait = 60 * time.Second
 	// Send pings to peer with this period. Must be less than pongWait.
 	pingPeriod = (pongWait * 9) / 10
+	sendWait   = 3 * time.Second
 )
 
 var connId = 0
@@ -29,14 +30,14 @@ func nextConnId() string {
 	return fmt.Sprintf("ws%d", connId)
 }
 
-func Dial(url string) (*Connection, error) {
+func Dial(ctx context.Context, url string) (*Connection, error) {
 	log.Debug().Msgf("dial: %s", url)
-	ws, _, err := websocket.DefaultDialer.Dial(url, nil)
+	ws, _, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
 	if err != nil {
 		return nil, err
 	}
 	log.Debug().Msgf("connected to: %s", url)
-	conn := NewConnection(ws)
+	conn := NewConnection(ctx, ws)
 	return conn, nil
 }
 
@@ -51,8 +52,8 @@ type Connection struct {
 	onClosing func()
 }
 
-func NewConnection(socket *websocket.Conn) *Connection {
-	ctx, cancel := context.WithCancel(context.Background())
+func NewConnection(ctx context.Context, socket *websocket.Conn) *Connection {
+	ctx, cancel := context.WithCancel(ctx)
 	p := &Connection{
 		id:        nextConnId(),
 		socket:    socket,
@@ -116,14 +117,18 @@ func (c *Connection) WritePump() {
 			c.socket.Close()
 			c.EmitClosing()
 			return
-		case t := <-ticker.C:
-			deadline := t.Add(pongWait)
-			err := c.socket.WriteControl(websocket.PingMessage, []byte{}, deadline)
+		case <-ticker.C:
+			err := c.socket.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(sendWait))
 			if err != nil {
 				return
 			}
 		case bytes := <-c.in:
-			err := c.socket.WriteMessage(websocket.TextMessage, bytes)
+			log.Info().Msgf("conn: write: %s", string(bytes))
+			err := c.socket.SetWriteDeadline(time.Now().Add(sendWait))
+			if err != nil {
+				return
+			}
+			err = c.socket.WriteMessage(websocket.TextMessage, bytes)
 			if err != nil {
 				return
 			}

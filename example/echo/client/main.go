@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"flag"
 	"fmt"
 	"os"
@@ -114,7 +115,8 @@ func (s *CounterSink) OnSignal(signalId string, args core.Args) {
 func main() {
 	flag.Parse()
 	registry := client.NewRegistry()
-	conn, err := ws.Dial(*addr)
+	ctx := context.Background()
+	conn, err := ws.Dial(ctx, *addr)
 	if err != nil {
 		fmt.Printf("dial error: %s\n", err)
 		return

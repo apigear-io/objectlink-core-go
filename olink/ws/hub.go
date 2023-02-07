@@ -86,7 +86,7 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	log.Info().Msgf("new connection: %s", socket.RemoteAddr())
-	conn := NewConnection(socket)
+	conn := NewConnection(h.ctx, socket)
 	conn.OnClosing(func() {
 		h.unregister <- conn
 	})

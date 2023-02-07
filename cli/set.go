@@ -13,6 +13,9 @@ var set = Command{
 		if len(args) < 3 {
 			return fmt.Errorf("no property value")
 		}
+		if node == nil {
+			return fmt.Errorf("no client node")
+		}
 		name := args[1]
 		value := args[2]
 		node.SetRemoteProperty(name, value)
