@@ -67,6 +67,9 @@ func AsInt(v any) int64 {
 }
 
 func AsArgs(v Any) Args {
+	if v == nil {
+		return []any{}
+	}
 	switch v := v.(type) {
 	case []any:
 		return v

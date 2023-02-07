@@ -24,10 +24,11 @@ func init() {
 		help,
 		info,
 		invoke,
+		signal,
 		link,
+		unlink,
+		set,
 		quit,
 		remove,
-		set,
-		unlink,
 	}
 }

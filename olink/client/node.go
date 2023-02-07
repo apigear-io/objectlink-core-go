@@ -115,6 +115,9 @@ func (n *Node) Write(data []byte) (int, error) {
 		if !ok {
 			return 0, fmt.Errorf("no pending invoke with id %d", requestId)
 		}
+		if fn == nil {
+			return 0, fmt.Errorf("no function for pending invoke with id %d", requestId)
+		}
 		delete(n.pending, requestId)
 		fn(InvokeReplyArg{methodId, value})
 	case core.MsgSignal:
@@ -138,7 +141,9 @@ func (n *Node) Write(data []byte) (int, error) {
 
 func (n *Node) InvokeRemote(methodId string, args core.Args, f InvokeReplyFunc) {
 	n.seqId++
-	n.pending[n.seqId] = f
+	if f != nil {
+		n.pending[n.seqId] = f
+	}
 	n.SendMessage(core.MakeInvokeMessage(n.seqId, methodId, args))
 }
 
