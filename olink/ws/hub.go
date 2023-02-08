@@ -52,6 +52,10 @@ func (h *Hub) run() {
 			log.Info().Msgf("hub: register: %s", conn.Id())
 			node := remote.NewNode(h.registry)
 			conn.SetOutput(node)
+			conn.onClosing = func() {
+				h.unregister <- conn
+				h.registry.DetachRemoteNode(node)
+			}
 			node.SetOutput(conn)
 			h.conns = append(h.conns, conn)
 		case conn := <-h.unregister:
@@ -87,9 +91,6 @@ func (h *Hub) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	}
 	log.Info().Msgf("new connection: %s", socket.RemoteAddr())
 	conn := NewConnection(h.ctx, socket)
-	conn.OnClosing(func() {
-		h.unregister <- conn
-	})
 	h.register <- conn
 }
 

@@ -95,6 +95,11 @@ func (c *Connection) Id() string {
 	return c.id
 }
 
+// Name returns the name of the connection
+func (c *Connection) Name() string {
+	return fmt.Sprintf("conn-%s", c.id)
+}
+
 func (c *Connection) Url() string {
 	return c.socket.RemoteAddr().String()
 }
@@ -123,7 +128,7 @@ func (c *Connection) WritePump() {
 				return
 			}
 		case bytes := <-c.in:
-			log.Debug().Msgf("conn: write: %s", string(bytes))
+			log.Debug().Msgf("%s: write: %s", c.Name(), string(bytes))
 			err := c.socket.SetWriteDeadline(time.Now().Add(sendWait))
 			if err != nil {
 				return
@@ -154,7 +159,7 @@ func (c *Connection) ReadPump() {
 			if out != nil {
 				_, err = out.Write(bytes)
 				if err != nil {
-					log.Debug().Msgf("conn: write error: %v", err)
+					log.Debug().Msgf("%s: write error: %v", c.Name(), err)
 					return
 				}
 			}
