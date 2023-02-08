@@ -123,7 +123,7 @@ func (c *Connection) WritePump() {
 				return
 			}
 		case bytes := <-c.in:
-			log.Info().Msgf("conn: write: %s", string(bytes))
+			log.Debug().Msgf("conn: write: %s", string(bytes))
 			err := c.socket.SetWriteDeadline(time.Now().Add(sendWait))
 			if err != nil {
 				return
