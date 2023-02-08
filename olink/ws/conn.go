@@ -43,13 +43,13 @@ func Dial(ctx context.Context, url string) (*Connection, error) {
 
 type Connection struct {
 	sync.Mutex
-	id        string
-	socket    *websocket.Conn
-	in        chan []byte
-	ctx       context.Context
-	ctxCancel context.CancelFunc
-	out       io.WriteCloser
-	onClosing func()
+	id            string
+	socket        *websocket.Conn
+	in            chan []byte
+	ctx           context.Context
+	ctxCancel     context.CancelFunc
+	out           io.WriteCloser
+	closeHandlers []func()
 }
 
 func NewConnection(ctx context.Context, socket *websocket.Conn) *Connection {
@@ -77,12 +77,12 @@ func NewConnection(ctx context.Context, socket *websocket.Conn) *Connection {
 }
 
 func (c *Connection) OnClosing(onClosing func()) {
-	c.onClosing = onClosing
+	c.closeHandlers = append(c.closeHandlers, onClosing)
 }
 
 func (c *Connection) EmitClosing() {
-	if c.onClosing != nil {
-		c.onClosing()
+	for _, h := range c.closeHandlers {
+		h()
 	}
 }
 
