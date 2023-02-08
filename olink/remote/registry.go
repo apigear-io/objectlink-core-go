@@ -89,6 +89,8 @@ func (r *Registry) AttachRemoteNode(node *Node) {
 
 // DetachRemoteNode removes the link between the object and the node.
 func (r *Registry) DetachRemoteNode(node *Node) {
+	r.Lock()
+	defer r.Unlock()
 	for _, v := range r.entries {
 		if v.nodes != nil {
 			for i, n := range v.nodes {
@@ -120,6 +122,8 @@ func (r *Registry) UnlinkRemoteNode(objectId string, node *Node) {
 }
 
 func (r *Registry) entry(objectId string) *SourceToNodeEntry {
+	r.Lock()
+	defer r.Unlock()
 	e, ok := r.entries[objectId]
 	if !ok {
 		e = &SourceToNodeEntry{
@@ -132,11 +136,15 @@ func (r *Registry) entry(objectId string) *SourceToNodeEntry {
 }
 
 func (r *Registry) removeEntry(objectId string) {
+	r.Lock()
+	defer r.Unlock()
 	delete(r.entries, objectId)
 }
 
-func (e *Registry) NotifyPropertyChange(objectId string, kwargs core.KWArgs) {
-	for _, n := range e.entry(objectId).nodes {
+func (r *Registry) NotifyPropertyChange(objectId string, kwargs core.KWArgs) {
+	r.Lock()
+	defer r.Unlock()
+	for _, n := range r.entry(objectId).nodes {
 		for name, value := range kwargs {
 			propertyId := core.MakeSymbolId(objectId, name)
 			n.NotifyPropertyChange(propertyId, value)
@@ -144,9 +152,11 @@ func (e *Registry) NotifyPropertyChange(objectId string, kwargs core.KWArgs) {
 	}
 }
 
-func (e *Registry) NotifySignal(objectId string, name string, args core.Args) {
+func (r *Registry) NotifySignal(objectId string, name string, args core.Args) {
 	signalId := core.MakeSymbolId(objectId, name)
-	for _, n := range e.entry(objectId).nodes {
+	r.Lock()
+	defer r.Unlock()
+	for _, n := range r.entry(objectId).nodes {
 		n.NotifySignal(signalId, args)
 	}
 }
