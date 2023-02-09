@@ -3,17 +3,19 @@ package client
 import (
 	"fmt"
 	"io"
+	"strconv"
+	"sync/atomic"
 
 	"github.com/apigear-io/objectlink-core-go/log"
 
 	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
-var nodeId = 0
+var nodeId atomic.Int32
 
 func nextNodeId() string {
-	nodeId++
-	return fmt.Sprintf("n%d", nodeId)
+	next := nodeId.Add(1)
+	return "n" + strconv.Itoa(int(next))
 }
 
 type InvokeReplyArg struct {
@@ -25,7 +27,7 @@ type InvokeReplyFunc func(arg InvokeReplyArg)
 
 type Node struct {
 	id       string
-	Registry *Registry
+	registry *Registry
 	pending  map[int64]InvokeReplyFunc
 	seqId    int64
 	conv     core.MessageConverter
@@ -35,7 +37,7 @@ type Node struct {
 func NewNode(registry *Registry) *Node {
 	return &Node{
 		id:       nextNodeId(),
-		Registry: registry,
+		registry: registry,
 		pending:  make(map[int64]InvokeReplyFunc),
 		seqId:    0,
 		conv: core.MessageConverter{
@@ -48,9 +50,13 @@ func (n *Node) Id() string {
 	return n.id
 }
 
+func (n Node) Registry() *Registry {
+	return n.registry
+}
+
 func (n *Node) Close() error {
 	log.Debug().Msgf("node %s: closing", n.Id())
-	n.Registry.DetachClientNode(n)
+	n.registry.DetachClientNode(n)
 	return nil
 }
 
@@ -92,7 +98,7 @@ func (n *Node) Write(data []byte) (int, error) {
 	case core.MsgInit:
 		// get the sink and call the on init method
 		objectId, props := msg.AsInit()
-		sink := n.Registry.ObjectSink(objectId)
+		sink := n.registry.ObjectSink(objectId)
 		if sink == nil {
 			return 0, fmt.Errorf("no sink for %s", objectId)
 		}
@@ -102,7 +108,7 @@ func (n *Node) Write(data []byte) (int, error) {
 		// get the sink and call the on property change method
 		propertyId, value := msg.AsPropertyChange()
 		objectId := core.SymbolIdToObjectId(propertyId)
-		sink := n.Registry.ObjectSink(objectId)
+		sink := n.registry.ObjectSink(objectId)
 		if sink == nil {
 			return 0, fmt.Errorf("no sink for %s", propertyId)
 		}
@@ -124,7 +130,7 @@ func (n *Node) Write(data []byte) (int, error) {
 		// get the sink and call the on signal method
 		signalId, args := msg.AsSignal()
 		objectId := core.SymbolIdToObjectId(signalId)
-		sink := n.Registry.ObjectSink(objectId)
+		sink := n.registry.ObjectSink(objectId)
 		if sink == nil {
 			return 0, fmt.Errorf("no sink for %s", signalId)
 		}
@@ -152,11 +158,11 @@ func (n *Node) SetRemoteProperty(propertyId string, value core.Any) {
 }
 
 func (n *Node) LinkRemoteNode(objectId string) {
-	n.Registry.LinkClientNode(objectId, n)
+	n.registry.LinkClientNode(objectId, n)
 	n.SendMessage(core.MakeLinkMessage(objectId))
 }
 
 func (n *Node) UnlinkRemoteNode(objectId string) {
-	n.Registry.UnlinkClientNode(objectId)
+	n.registry.UnlinkClientNode(objectId)
 	n.SendMessage(core.MakeUnlinkMessage(objectId))
 }

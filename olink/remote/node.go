@@ -4,37 +4,39 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strconv"
 	"sync"
+	"sync/atomic"
 
 	"github.com/apigear-io/objectlink-core-go/log"
 
 	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
-var id = 0
+var id atomic.Int32
 
 func nextId() string {
-	id++
-	return fmt.Sprintf("n%d", id)
+	next := id.Add(1)
+	return "n" + strconv.Itoa(int(next))
 }
 
 type Node struct {
-	sync.Mutex
-	id        string
-	Registry  *Registry
-	Converter core.MessageConverter
-	output    io.WriteCloser
-	incoming  chan []byte
-	ctx       context.Context
-	cancel    context.CancelFunc
+	sync.RWMutex
+	id       string
+	registry *Registry
+	conv     core.MessageConverter
+	output   io.WriteCloser
+	incoming chan []byte
+	ctx      context.Context
+	cancel   context.CancelFunc
 }
 
 func NewNode(registry *Registry) *Node {
 	ctx, cancel := context.WithCancel(context.Background())
 	n := &Node{
 		id:       nextId(),
-		Registry: registry,
-		Converter: core.MessageConverter{
+		registry: registry,
+		conv: core.MessageConverter{
 			Format: core.FormatJson,
 		},
 		incoming: make(chan []byte),
@@ -47,29 +49,44 @@ func NewNode(registry *Registry) *Node {
 }
 
 func (n *Node) Id() string {
+	n.RLock()
+	defer n.RUnlock()
 	return n.id
+}
+
+func (n *Node) Registry() *Registry {
+	n.RLock()
+	defer n.RUnlock()
+	return n.registry
 }
 
 func (n *Node) SetOutput(out io.WriteCloser) {
 	n.Lock()
-	defer n.Unlock()
 	n.output = out
+	n.Unlock()
 }
 
 func (n *Node) RemoveNode() {
-	n.Registry.DetachRemoteNode(n)
+	n.RLock()
+	registry := n.registry
+	n.RUnlock()
+	registry.DetachRemoteNode(n)
 }
 
 func (n *Node) Close() error {
-	n.Lock()
+	log.Debug().Msgf("node %s: closing", n.id)
+	n.RLock()
 	cancel := n.cancel
-	n.Unlock()
 	cancel()
+	n.RUnlock()
 	return nil
 }
 
 func (n *Node) Write(data []byte) (int, error) {
-	n.incoming <- data
+	n.RLock()
+	incoming := n.incoming
+	n.RUnlock()
+	incoming <- data
 	return len(data), nil
 }
 
@@ -79,15 +96,15 @@ func (n *Node) IncomingPump() {
 		case <-n.ctx.Done():
 			return
 		case data := <-n.incoming:
-			msg, err := n.Converter.FromData(data)
+			msg, err := n.conv.FromData(data)
 			if err != nil {
 				continue
 			}
 			switch msg.Type() {
 			case core.MsgLink:
 				objectId := msg.AsLink()
-				n.Registry.LinkRemoteNode(objectId, n)
-				s := n.Registry.GetObjectSource(objectId)
+				n.registry.LinkRemoteNode(objectId, n)
+				s := n.registry.GetObjectSource(objectId)
 				if s == nil {
 					break
 				}
@@ -103,12 +120,12 @@ func (n *Node) IncomingPump() {
 			case core.MsgUnlink:
 				// unlink the sink from the source
 				objectId := msg.AsUnlink()
-				n.Registry.UnlinkRemoteNode(objectId, n)
+				n.registry.UnlinkRemoteNode(objectId, n)
 			case core.MsgSetProperty:
 				// set the property on the source
 				propertyId, value := msg.AsSetProperty()
 				objectId, name := core.SymbolIdToParts(propertyId)
-				s := n.Registry.GetObjectSource(objectId)
+				s := n.registry.GetObjectSource(objectId)
 				if s == nil {
 					break
 				}
@@ -120,7 +137,7 @@ func (n *Node) IncomingPump() {
 				// invoke the method on the source
 				requestId, methodId, args := msg.AsInvoke()
 				objectId, name := core.SymbolIdToParts(methodId)
-				s := n.Registry.GetObjectSource(objectId)
+				s := n.registry.GetObjectSource(objectId)
 				if s == nil {
 					log.Debug().Msgf("node: no source for %s", objectId)
 					break
@@ -143,39 +160,54 @@ func (n *Node) IncomingPump() {
 }
 
 func (n *Node) SendMessage(msg core.Message) {
-	log.Debug().Msgf("%s -> %v", n.Id(), msg)
-	n.Lock()
-	out := n.output
-	n.Unlock()
-	if out == nil {
-		log.Info().Msgf("node: no output")
-		return
-	}
-	data, err := n.Converter.ToData(msg)
+	log.Debug().Msgf("-> %s send %v", n.id, msg)
+	n.RLock()
+	output := n.output
+	conv := n.conv
+	n.RUnlock()
+	err := doSendMessage(output, conv, msg)
 	if err != nil {
-		log.Info().Msgf("node: error converting message: %v", err)
-		return
-	}
-	log.Debug().Msgf("node: write output-> %s", data)
-	_, err = out.Write(data)
-	if err != nil {
-		log.Info().Msgf("node: error writing message: %v", err)
+		log.Error().Msgf("node: error sending message: %v", err)
 	}
 }
 
+func doSendMessage(o io.WriteCloser, c core.MessageConverter, msg core.Message) error {
+	if o == nil {
+		return fmt.Errorf("no output")
+	}
+	if msg == nil {
+		return fmt.Errorf("no message")
+	}
+
+	data, err := c.ToData(msg)
+	if err != nil {
+		return fmt.Errorf("error converting message: %v", err)
+	}
+	_, err = o.Write(data)
+	if err != nil {
+		return fmt.Errorf("error writing message: %v", err)
+	}
+	return nil
+}
+
 func (n *Node) BroadcastMessage(objectId string, msg core.Message) {
-	for _, node := range n.Registry.GetRemoteNodes(objectId) {
+	n.RLock()
+	registry := n.registry
+	n.RUnlock()
+	for _, node := range registry.GetRemoteNodes(objectId) {
 		node.SendMessage(msg)
 	}
 }
 
 func (n *Node) NotifyPropertyChange(propertyId string, value core.Any) {
+	log.Debug().Msgf("node %s: notify property change: %s", n.id, propertyId)
 	objectId := core.SymbolIdToObjectId(propertyId)
 	msg := core.MakePropertyChangeMessage(propertyId, value)
 	n.BroadcastMessage(objectId, msg)
 }
 
 func (n *Node) NotifySignal(signalId string, args core.Args) {
+	log.Debug().Msgf("node %s: notify signal: %s", n.id, signalId)
 	objectId := core.SymbolIdToObjectId(signalId)
 	msg := core.MakeSignalMessage(signalId, args)
 	n.BroadcastMessage(objectId, msg)

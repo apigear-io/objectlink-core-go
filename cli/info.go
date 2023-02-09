@@ -16,8 +16,8 @@ var info = Command{
 		} else {
 			fmt.Printf("node %s\n", node.Id())
 			fmt.Println("registry information:")
-			for _, id := range node.Registry.ObjectIds() {
-				node := node.Registry.Node(id)
+			for _, id := range node.Registry().ObjectIds() {
+				node := node.Registry().GetClientNode(id)
 				if node != nil {
 					fmt.Printf("  %s linked to %s\n", id, node.Id())
 				} else {

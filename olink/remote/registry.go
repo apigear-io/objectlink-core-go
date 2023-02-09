@@ -1,26 +1,23 @@
 package remote
 
 import (
-	"fmt"
-	"sync"
+	"strconv"
+	"sync/atomic"
 
 	"github.com/apigear-io/objectlink-core-go/log"
 
 	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
-type SourceFactory func(objectId string) IObjectSource
-
-var registryId = 0
+var registryId atomic.Int32
 
 func nextRegistryId() string {
-	registryId++
-	return fmt.Sprintf("r%d", registryId)
+	next := registryId.Add(1)
+	return "r" + strconv.Itoa(int(next))
 }
 
-type SourceToNodeEntry struct {
-	source IObjectSource
-	nodes  []*Node
+func clearRegistryId() {
+	registryId.Store(0)
 }
 
 // Registry is the registry of remote objects.
@@ -28,59 +25,56 @@ type SourceToNodeEntry struct {
 // A object source is registered in the registry and can be retrieved by the object id.
 // The source can have one or more remote nodes linked to it.
 type Registry struct {
-	sync.Mutex
-	id            string
-	entries       map[string]*SourceToNodeEntry
-	sourceFactory SourceFactory
+	id      string
+	entries *remoteEntries
 }
 
+// NewRegistry creates a new registry.
 func NewRegistry() *Registry {
-	return &Registry{
+	r := &Registry{
 		id:      nextRegistryId(),
-		entries: make(map[string]*SourceToNodeEntry),
+		entries: newRemoteEntries(),
 	}
+	return r
 }
 
+// Id returns the registry id.
 func (r *Registry) Id() string {
 	return r.id
 }
 
 // SetSourceFactory sets the source factory.
 func (r *Registry) SetSourceFactory(factory SourceFactory) {
-	r.sourceFactory = factory
+	r.entries.setFactory(factory)
 }
 
 // AddObjectSource adds the object source to the registry.
-func (r *Registry) AddObjectSource(source IObjectSource) {
-	r.entry(source.ObjectId()).source = source
+func (r *Registry) AddObjectSource(source IObjectSource) error {
+	return r.entries.addSource(source)
 }
 
 // RemoveObjectSource removes the object source from the registry.
 func (r *Registry) RemoveObjectSource(source IObjectSource) {
-	r.removeEntry(source.ObjectId())
+	if source == nil {
+		log.Warn().Msg("registry: source is nil")
+		return
+	}
+	r.entries.removeEntry(source.ObjectId())
 }
 
 // GetObjectSource returns the object source by name.
 func (r *Registry) GetObjectSource(objectId string) IObjectSource {
-	s := r.entry(objectId).source
-	if s == nil && r.sourceFactory != nil {
-		s = r.sourceFactory(objectId)
-		if s != nil {
-			r.AddObjectSource(s)
-		}
-	}
-	return s
+	return r.entries.getSource(objectId)
 }
 
 // Checks if the object is registered.
 func (r *Registry) IsRegistered(objectId string) bool {
-	_, ok := r.entries[objectId]
-	return ok
+	return r.entries.hasEntry(objectId)
 }
 
 // GetRemoteNode returns the node that is linked to the object.
 func (r *Registry) GetRemoteNodes(objectId string) []*Node {
-	return r.entry(objectId).nodes
+	return r.entries.getNodes(objectId)
 }
 
 // AttachRemoteNode attaches the node to the registry.
@@ -89,62 +83,24 @@ func (r *Registry) AttachRemoteNode(node *Node) {
 
 // DetachRemoteNode removes the link between the object and the node.
 func (r *Registry) DetachRemoteNode(node *Node) {
-	r.Lock()
-	defer r.Unlock()
-	for _, v := range r.entries {
-		if v.nodes != nil {
-			for i, n := range v.nodes {
-				if n == node {
-					v.nodes = append(v.nodes[:i], v.nodes[i+1:]...)
-				}
-			}
-		}
-	}
+	r.entries.purgeNode(node)
 }
 
 // LinkRemoteNode adds a link between the object and the node.
 func (r *Registry) LinkRemoteNode(objectId string, node *Node) {
-	log.Info().Msgf("registry: link %s -> %s", objectId, node.Id())
-	r.Lock()
-	defer r.Unlock()
-	r.entry(objectId).nodes = append(r.entry(objectId).nodes, node)
+	r.entries.addNode(objectId, node)
 }
 
 // UnlinkRemoteNode removes the link between the object and the node.
 func (r *Registry) UnlinkRemoteNode(objectId string, node *Node) {
-	r.Lock()
-	defer r.Unlock()
-	for i, n := range r.entry(objectId).nodes {
-		if n == node {
-			r.entry(objectId).nodes = append(r.entry(objectId).nodes[:i], r.entry(objectId).nodes[i+1:]...)
-		}
-	}
+	r.entries.removeNode(objectId, node)
 }
 
-func (r *Registry) entry(objectId string) *SourceToNodeEntry {
-	r.Lock()
-	defer r.Unlock()
-	e, ok := r.entries[objectId]
-	if !ok {
-		e = &SourceToNodeEntry{
-			source: nil,
-			nodes:  make([]*Node, 0),
-		}
-		r.entries[objectId] = e
-	}
-	return e
-}
-
-func (r *Registry) removeEntry(objectId string) {
-	r.Lock()
-	defer r.Unlock()
-	delete(r.entries, objectId)
-}
-
+// NotifyPropertyChange notifies the property change to the nodes.
 func (r *Registry) NotifyPropertyChange(objectId string, kwargs core.KWArgs) {
-	r.Lock()
-	defer r.Unlock()
-	for _, n := range r.entry(objectId).nodes {
+	log.Debug().Msgf("registry: notify property change %s", objectId)
+	nodes := r.entries.getNodes(objectId)
+	for _, n := range nodes {
 		for name, value := range kwargs {
 			propertyId := core.MakeSymbolId(objectId, name)
 			n.NotifyPropertyChange(propertyId, value)
@@ -152,11 +108,12 @@ func (r *Registry) NotifyPropertyChange(objectId string, kwargs core.KWArgs) {
 	}
 }
 
+// NotifySignal notifies the signal to the nodes that are linked to the object.
 func (r *Registry) NotifySignal(objectId string, name string, args core.Args) {
+	log.Debug().Msgf("registry: notify signal %s.%s", objectId, name)
 	signalId := core.MakeSymbolId(objectId, name)
-	r.Lock()
-	defer r.Unlock()
-	for _, n := range r.entry(objectId).nodes {
+	nodes := r.entries.getNodes(objectId)
+	for _, n := range nodes {
 		n.NotifySignal(signalId, args)
 	}
 }

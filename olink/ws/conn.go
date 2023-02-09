@@ -4,7 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"strconv"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/apigear-io/objectlink-core-go/log"
@@ -23,18 +25,18 @@ const (
 	sendWait   = 3 * time.Second
 )
 
-var connId = 0
+var connId atomic.Int32
 
 func nextConnId() string {
-	connId++
-	return fmt.Sprintf("ws%d", connId)
+	next := connId.Add(1)
+	return "c" + strconv.Itoa(int(next))
 }
 
 func Dial(ctx context.Context, url string) (*Connection, error) {
 	log.Debug().Msgf("dial: %s", url)
 	ws, _, err := websocket.DefaultDialer.DialContext(ctx, url, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dial: %w", err)
 	}
 	log.Debug().Msgf("connected to: %s", url)
 	conn := NewConnection(ctx, ws)
@@ -42,7 +44,7 @@ func Dial(ctx context.Context, url string) (*Connection, error) {
 }
 
 type Connection struct {
-	sync.Mutex
+	sync.RWMutex
 	id            string
 	socket        *websocket.Conn
 	in            chan []byte
@@ -77,11 +79,16 @@ func NewConnection(ctx context.Context, socket *websocket.Conn) *Connection {
 }
 
 func (c *Connection) OnClosing(onClosing func()) {
+	c.Lock()
+	defer c.Unlock()
 	c.closeHandlers = append(c.closeHandlers, onClosing)
 }
 
 func (c *Connection) EmitClosing() {
-	for _, h := range c.closeHandlers {
+	c.RLock()
+	handlers := c.closeHandlers
+	c.RUnlock()
+	for _, h := range handlers {
 		h()
 	}
 }
@@ -92,30 +99,34 @@ func (c *Connection) Close() error {
 }
 
 func (c *Connection) Id() string {
+	c.RLock()
+	defer c.RUnlock()
 	return c.id
 }
 
-// Name returns the name of the connection
-func (c *Connection) Name() string {
-	return fmt.Sprintf("conn-%s", c.id)
-}
-
 func (c *Connection) Url() string {
+	c.RLock()
+	defer c.RUnlock()
 	return c.socket.RemoteAddr().String()
 }
 
 func (c *Connection) SetOutput(out io.WriteCloser) {
 	c.Lock()
-	defer c.Unlock()
 	c.out = out
+	c.Unlock()
 }
 
 func (c *Connection) WritePump() {
 	ticker := time.NewTicker(pingPeriod)
-	defer c.Close()
+	defer func() {
+		c.Close()
+		ticker.Stop()
+		log.Debug().Msgf("%s: exit write pump ", c.id)
+	}()
 	for {
 		select {
 		case <-c.ctx.Done():
+			log.Info().Msgf("%s: closing", c.id)
 			if c.out != nil {
 				c.out.Close()
 			}
@@ -125,24 +136,27 @@ func (c *Connection) WritePump() {
 		case <-ticker.C:
 			err := c.socket.WriteControl(websocket.PingMessage, []byte{}, time.Now().Add(sendWait))
 			if err != nil {
-				return
+				log.Error().Msgf("%s: write ping error: %v", c.id, err)
 			}
 		case bytes := <-c.in:
-			log.Debug().Msgf("%s: write: %s", c.Name(), string(bytes))
+			log.Debug().Msgf("%s: write: %s", c.id, string(bytes))
 			err := c.socket.SetWriteDeadline(time.Now().Add(sendWait))
 			if err != nil {
-				return
+				log.Error().Msgf("%s: set write deadline error: %v", c.id, err)
 			}
 			err = c.socket.WriteMessage(websocket.TextMessage, bytes)
 			if err != nil {
-				return
+				log.Error().Msgf("%s: write error: %v", c.id, err)
 			}
 		}
 	}
 }
 
 func (c *Connection) ReadPump() {
-	defer c.Close()
+	defer func() {
+		c.Close()
+		log.Debug().Msgf("%s: exit read pump ", c.id)
+	}()
 	for {
 		select {
 		case <-c.ctx.Done():
@@ -151,23 +165,26 @@ func (c *Connection) ReadPump() {
 			c.socket.SetReadDeadline(time.Now().Add(pongWait))
 			_, bytes, err := c.socket.ReadMessage()
 			if err != nil {
+				log.Info().Msgf("%s: can not read: %v", c.id, err)
 				return
 			}
-			c.Lock()
+			c.RLock()
 			out := c.out
-			c.Unlock()
-			if out != nil {
-				_, err = out.Write(bytes)
-				if err != nil {
-					log.Debug().Msgf("%s: write error: %v", c.Name(), err)
-					return
-				}
+			c.RUnlock()
+			if out == nil {
+				log.Debug().Msgf("%s: no output", c.id)
+				continue
+			}
+			_, err = out.Write(bytes)
+			if err != nil {
+				log.Debug().Msgf("%s: write error: %v", c.id, err)
 			}
 		}
 	}
 }
 
 func (c *Connection) Write(bytes []byte) (int, error) {
+	log.Debug().Msgf("%s: write: %s", c.id, string(bytes))
 	c.in <- bytes
 	return len(bytes), nil
 }

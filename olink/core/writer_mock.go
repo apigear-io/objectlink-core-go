@@ -1,18 +1,18 @@
 package core
 
 type MockDataWriter struct {
-	Messages  []Message
-	converter *MessageConverter
+	Messages []Message
+	conv     *MessageConverter
 }
 
 func NewMockDataWriter() *MockDataWriter {
 	return &MockDataWriter{
-		converter: &MessageConverter{Format: FormatJson},
+		conv: &MessageConverter{Format: FormatJson},
 	}
 }
 
 func (w *MockDataWriter) Write(data []byte) (int, error) {
-	msg, err := w.converter.FromData(data)
+	msg, err := w.conv.FromData(data)
 	if err != nil {
 		return 0, err
 	}

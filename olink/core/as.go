@@ -7,7 +7,7 @@ import (
 	"github.com/apigear-io/objectlink-core-go/log"
 )
 
-func AsBool(v Any) bool {
+func AsBool(v any) bool {
 	switch v := v.(type) {
 	case bool:
 		return v
@@ -21,7 +21,7 @@ func AsBool(v Any) bool {
 	}
 }
 
-func AsFloat(v Any) float64 {
+func AsFloat(v any) float64 {
 	switch v := v.(type) {
 	case float64:
 		return v
@@ -66,7 +66,7 @@ func AsInt(v any) int64 {
 	}
 }
 
-func AsArgs(v Any) Args {
+func AsArgs(v any) Args {
 	if v == nil {
 		return []any{}
 	}
@@ -79,17 +79,19 @@ func AsArgs(v Any) Args {
 	}
 }
 
-func AsString(v Any) string {
+func AsString(v any) string {
 	switch v := v.(type) {
 	case string:
 		return v
+	case int:
+		return strconv.Itoa(v)
 	default:
 		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return ""
 	}
 }
 
-func AsMsgType(v Any) MsgType {
+func AsMsgType(v any) MsgType {
 	switch v := v.(type) {
 	case MsgType:
 		return v
@@ -100,11 +102,7 @@ func AsMsgType(v Any) MsgType {
 	case float64:
 		return MsgType(v)
 	case string:
-		i, err := strconv.ParseInt(v, 10, 64)
-		if err != nil {
-			return MsgType(0)
-		}
-		return MsgType(i)
+		return MsgTypeFromString(v)
 	case json.Number:
 		i, err := v.Int64()
 		if err != nil {
@@ -117,11 +115,14 @@ func AsMsgType(v Any) MsgType {
 	}
 }
 
-func AsAny(v Any) Any {
+func AsAny(v any) any {
 	return v
 }
 
-func AsProps(v Any) KWArgs {
+func AsProps(v any) KWArgs {
+	if v == nil {
+		return KWArgs{}
+	}
 	switch v := v.(type) {
 	case map[string]any:
 		return v
@@ -131,7 +132,7 @@ func AsProps(v Any) KWArgs {
 	}
 }
 
-func AsArrayBool(v Any) []bool {
+func AsArrayBool(v any) []bool {
 	switch v := v.(type) {
 	case []bool:
 		return v
@@ -141,38 +142,70 @@ func AsArrayBool(v Any) []bool {
 	}
 }
 
-func AsArrayInt(v Any) []int64 {
+func AsArrayInt(v any) []int64 {
+	if v == nil {
+		return []int64{}
+	}
 	switch v := v.(type) {
 	case []int64:
 		return v
+	case []any:
+		r := make([]int64, len(v))
+		for i, v := range v {
+			r[i] = AsInt(v)
+		}
+		return r
 	default:
 		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return nil
 	}
 }
 
-func AsArrayFloat(v Any) []float64 {
+func AsArrayFloat(v any) []float64 {
+	if v == nil {
+		return []float64{}
+	}
 	switch v := v.(type) {
 	case []float64:
 		return v
+	case []any:
+		r := make([]float64, len(v))
+		for i, v := range v {
+			r[i] = AsFloat(v)
+		}
+		return r
 	default:
 		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return nil
 	}
 }
 
-func AsArrayString(v Any) []string {
+func AsArrayString(v any) []string {
+	if v == nil {
+		return []string{}
+	}
 	switch v := v.(type) {
 	case []string:
 		return v
+	case []any:
+		r := make([]string, len(v))
+		for i, v := range v {
+			r[i] = AsString(v)
+		}
+		return r
 	default:
 		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return nil
 	}
 }
 
-func AsStruct(v Any) KWArgs {
+func AsStruct(v any) KWArgs {
+	if v == nil {
+		return KWArgs{}
+	}
 	switch v := v.(type) {
+	case map[string]any:
+		return v
 	case KWArgs:
 		return v
 	default:
@@ -181,7 +214,10 @@ func AsStruct(v Any) KWArgs {
 	}
 }
 
-func AsEnum(v Any) []any {
+func AsEnum(v any) []any {
+	if v == nil {
+		return []any{}
+	}
 	switch v := v.(type) {
 	case []any:
 		return v
@@ -191,21 +227,30 @@ func AsEnum(v Any) []any {
 	}
 }
 
-func AsInterface(v Any) interface{} {
+func AsInterface(v any) interface{} {
 	return v
 }
 
-func AsArrayStruct(v Any) []KWArgs {
+func AsArrayStruct(v any) []KWArgs {
+	if v == nil {
+		return []KWArgs{}
+	}
 	switch v := v.(type) {
 	case []KWArgs:
 		return v
+	case []map[string]any:
+		r := make([]KWArgs, len(v))
+		for i, v := range v {
+			r[i] = v
+		}
+		return r
 	default:
 		log.Warn().Msgf("unknown type %#v %T", v, v)
 		return []KWArgs{}
 	}
 }
 
-func AsArrayEnum(v Any) [][]any {
+func AsArrayEnum(v any) [][]any {
 	switch v := v.(type) {
 	case [][]any:
 		return v
@@ -215,7 +260,7 @@ func AsArrayEnum(v Any) [][]any {
 	}
 }
 
-func AsArrayInterface(v Any) []interface{} {
+func AsArrayInterface(v any) []interface{} {
 	switch v := v.(type) {
 	case []interface{}:
 		return v

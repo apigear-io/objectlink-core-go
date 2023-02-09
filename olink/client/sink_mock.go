@@ -8,6 +8,13 @@ type MockSink struct {
 	objectId string
 }
 
+func NewMockSink(objectId string) *MockSink {
+	return &MockSink{
+		events:   make([]core.Message, 0),
+		objectId: objectId,
+	}
+}
+
 func (m *MockSink) ObjectId() string {
 	return m.objectId
 }

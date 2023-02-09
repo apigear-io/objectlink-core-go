@@ -1,6 +1,10 @@
 package cli
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/apigear-io/objectlink-core-go/log"
+)
 
 var link = Command{
 	Usage: "link <objectid>",
@@ -17,9 +21,12 @@ var link = Command{
 			return fmt.Errorf("no client node")
 		}
 		if registry.ObjectSink(objectId) == nil {
-			fmt.Printf("register new sink for object %s\n", objectId)
+			log.Info().Msgf("register new sink for object %s", objectId)
 			sink := &MockSink{objectId: objectId}
-			registry.AddObjectSink(sink)
+			err := registry.AddObjectSink(sink)
+			if err != nil {
+				return err
+			}
 		}
 		// we only have one client node
 		node.LinkRemoteNode(objectId)

@@ -18,6 +18,12 @@ type MessageConverter struct {
 	Format MessageFormat
 }
 
+func NewConverter(format MessageFormat) *MessageConverter {
+	return &MessageConverter{
+		Format: format,
+	}
+}
+
 func (c *MessageConverter) ToData(msg Message) ([]byte, error) {
 	switch c.Format {
 	case FormatJson:

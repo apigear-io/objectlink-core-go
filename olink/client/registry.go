@@ -2,22 +2,24 @@ package client
 
 import (
 	"fmt"
+	"strconv"
+	"sync"
+	"sync/atomic"
 
 	"github.com/apigear-io/objectlink-core-go/log"
 )
 
 type SinkFactory func(objectId string) IObjectSink
 
-type SinkToClientEntry struct {
-	sink IObjectSink
-	node *Node
-}
-
-var registryId = 0
+var registryId atomic.Int32
 
 func nextRegistryId() string {
-	registryId++
-	return fmt.Sprintf("r%d", registryId)
+	next := registryId.Add(1)
+	return "r" + strconv.Itoa(int(next))
+}
+
+func clearRegistryId() {
+	registryId.Store(0)
 }
 
 // Registry is a registry of object sinks.
@@ -26,25 +28,29 @@ func nextRegistryId() string {
 // A sink is always associated with zero or one client node.
 // A node can be linked to zero or many sinks.
 type Registry struct {
+	sync.RWMutex
 	id      string
-	entries map[string]*SinkToClientEntry
-	factory SinkFactory
+	entries *clientEntries
 }
 
 func NewRegistry() *Registry {
+	log.Debug().Msg("create new registry")
 	return &Registry{
 		id:      nextRegistryId(),
-		entries: make(map[string]*SinkToClientEntry),
+		entries: newClientEntries(),
 	}
 }
 
 func (r *Registry) Id() string {
+	r.RLock()
+	defer r.RUnlock()
 	return r.id
 }
 
 // SetSinkFactory sets the sink factory.
 func (r *Registry) SetSinkFactory(factory SinkFactory) {
-	r.factory = factory
+	log.Debug().Msg("set sink factory")
+	r.entries.setFactory(factory)
 }
 
 // attach client node to registry
@@ -53,78 +59,56 @@ func (r *Registry) AttachClientNode(node *Node) {
 
 // detach client node from registry
 func (r *Registry) DetachClientNode(node *Node) {
-	for _, e := range r.entries {
-		if e.node == node {
-			log.Debug().Msgf("unlink client node %s from object %s", node.Id(), e.sink.ObjectId())
-			e.node = nil
-		}
+	if node == nil {
+		return
 	}
+	log.Debug().Msgf("detach client node %s", node.Id())
+	r.entries.purgeNode(node)
 }
 
 func (r *Registry) LinkClientNode(objectId string, node *Node) {
-	if entry := r.Entry(objectId); entry != nil {
-		log.Debug().Msgf("link client node %s to object %s", node.Id(), objectId)
-		entry.node = node
-	} else {
-		log.Warn().Msgf("object %s not found", objectId)
-	}
+	log.Debug().Msgf("link client node to object %s", objectId)
+	r.entries.setNode(objectId, node)
 }
 
 func (r *Registry) UnlinkClientNode(objectId string) {
 	log.Debug().Msgf("unlink client node from object %s", objectId)
-	r.Entry(objectId).node = nil
+	r.entries.clearNode(objectId)
 }
 
-func (r *Registry) AddObjectSink(sink IObjectSink) {
-	log.Info().Msgf("add object sink %s", sink.ObjectId())
-	r.Entry(sink.ObjectId()).sink = sink
+func (r *Registry) GetClientNode(objectId string) *Node {
+	return r.entries.getNode(objectId)
+}
+
+func (r *Registry) AddObjectSink(sink IObjectSink) error {
+	if sink == nil {
+		return fmt.Errorf("object sink is nil")
+	}
+	return r.entries.setSink(sink)
+}
+
+func (r *Registry) IsRegistered(objectId string) bool {
+	return r.entries.hasEntry(objectId)
 }
 
 // remove object sink from registry
 func (r *Registry) RemoveObjectSink(objectId string) {
 	log.Info().Msgf("remove object sink %s", objectId)
-	sink := r.Entry(objectId).sink
+	s := r.entries.getSink(objectId)
 
-	if sink != nil {
-		sink.OnRelease()
+	if s != nil {
+		s.OnRelease()
 	} else {
 		log.Warn().Msgf("object sink %s not found", objectId)
 	}
-	r.RemoveEntry(objectId)
+	r.entries.removeEntry(objectId)
 }
 
 // get object sink by name
 func (r *Registry) ObjectSink(objectId string) IObjectSink {
-	s := r.Entry(objectId).sink
-	if s == nil && r.factory != nil {
-		s = r.factory(objectId)
-		r.Entry(objectId).sink = s
-	}
-	return s
-}
-
-func (r *Registry) Node(objectId string) *Node {
-	return r.Entry(objectId).node
-}
-
-func (r *Registry) Entry(objectId string) *SinkToClientEntry {
-	if r.entries[objectId] == nil {
-		r.entries[objectId] = &SinkToClientEntry{
-			node: nil,
-			sink: nil,
-		}
-	}
-	return r.entries[objectId]
-}
-
-func (r *Registry) RemoveEntry(objectId string) {
-	delete(r.entries, objectId)
+	return r.entries.getSink(objectId)
 }
 
 func (r *Registry) ObjectIds() []string {
-	ids := make([]string, 0, len(r.entries))
-	for id := range r.entries {
-		ids = append(ids, id)
-	}
-	return ids
+	return r.entries.getEntryIds()
 }
