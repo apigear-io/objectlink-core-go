@@ -3,20 +3,14 @@ package client
 import (
 	"fmt"
 	"io"
-	"strconv"
-	"sync/atomic"
 
+	"github.com/apigear-io/objectlink-core-go/helper"
 	"github.com/apigear-io/objectlink-core-go/log"
 
 	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
-var nodeId atomic.Int32
-
-func nextNodeId() string {
-	next := nodeId.Add(1)
-	return "n" + strconv.Itoa(int(next))
-}
+var nextNodeId = helper.MakeIdGenerator("n")
 
 type InvokeReplyArg struct {
 	Identifier string

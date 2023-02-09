@@ -184,7 +184,6 @@ func (c *Connection) ReadPump() {
 }
 
 func (c *Connection) Write(bytes []byte) (int, error) {
-	log.Debug().Msgf("%s: write: %s", c.id, string(bytes))
 	c.in <- bytes
 	return len(bytes), nil
 }

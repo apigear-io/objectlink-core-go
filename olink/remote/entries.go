@@ -65,12 +65,21 @@ func (r *remoteEntries) addSource(source IObjectSource) error {
 // if the source does not exist, it is created using a factory
 func (r *remoteEntries) getSource(objectId string) IObjectSource {
 	e := r.getEntry(objectId)
+	if e == nil {
+		log.Error().Msgf("registry: entry %s not found", objectId)
+		return nil
+	}
+	if e.hasSource() {
+		return e.getSource()
+	}
 	r.Lock()
 	factory := r.factory
 	r.Unlock()
-	if !e.hasSource() && factory != nil {
-		e.setSource(r.factory(objectId))
+	if factory == nil {
+		log.Error().Msgf("registry: no source and no factory found for %s", objectId)
+		return nil
 	}
+	e.setSource(r.factory(objectId))
 	return e.getSource()
 }
 
@@ -106,10 +115,10 @@ func (r *remoteEntries) getNodes(objectId string) []*Node {
 func (r *remoteEntries) getEntry(objectId string) *sourceToNodeEntry {
 	r.Lock()
 	defer r.Unlock()
-	e, ok := r.entries[objectId]
+	_, ok := r.entries[objectId]
 	if !ok {
-		e = &sourceToNodeEntry{}
+		e := &sourceToNodeEntry{}
 		r.entries[objectId] = e
 	}
-	return e
+	return r.entries[objectId]
 }

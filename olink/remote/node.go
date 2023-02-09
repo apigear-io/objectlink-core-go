@@ -4,21 +4,15 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"strconv"
 	"sync"
-	"sync/atomic"
 
+	"github.com/apigear-io/objectlink-core-go/helper"
 	"github.com/apigear-io/objectlink-core-go/log"
 
 	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
-var id atomic.Int32
-
-func nextId() string {
-	next := id.Add(1)
-	return "n" + strconv.Itoa(int(next))
-}
+var nextNodeId = helper.MakeIdGenerator("n")
 
 type Node struct {
 	sync.RWMutex
@@ -34,7 +28,7 @@ type Node struct {
 func NewNode(registry *Registry) *Node {
 	ctx, cancel := context.WithCancel(context.Background())
 	n := &Node{
-		id:       nextId(),
+		id:       nextNodeId(),
 		registry: registry,
 		conv: core.MessageConverter{
 			Format: core.FormatJson,
@@ -201,14 +195,12 @@ func (n *Node) BroadcastMessage(objectId string, msg core.Message) {
 
 func (n *Node) NotifyPropertyChange(propertyId string, value core.Any) {
 	log.Debug().Msgf("node %s: notify property change: %s", n.id, propertyId)
-	objectId := core.SymbolIdToObjectId(propertyId)
 	msg := core.MakePropertyChangeMessage(propertyId, value)
-	n.BroadcastMessage(objectId, msg)
+	n.SendMessage(msg)
 }
 
 func (n *Node) NotifySignal(signalId string, args core.Args) {
 	log.Debug().Msgf("node %s: notify signal: %s", n.id, signalId)
-	objectId := core.SymbolIdToObjectId(signalId)
 	msg := core.MakeSignalMessage(signalId, args)
-	n.BroadcastMessage(objectId, msg)
+	n.SendMessage(msg)
 }

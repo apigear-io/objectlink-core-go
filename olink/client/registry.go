@@ -2,24 +2,18 @@ package client
 
 import (
 	"fmt"
-	"strconv"
 	"sync"
-	"sync/atomic"
 
+	"github.com/apigear-io/objectlink-core-go/helper"
 	"github.com/apigear-io/objectlink-core-go/log"
 )
 
 type SinkFactory func(objectId string) IObjectSink
 
-var registryId atomic.Int32
-
-func nextRegistryId() string {
-	next := registryId.Add(1)
-	return "r" + strconv.Itoa(int(next))
-}
+var nextRegistryId = helper.MakeIdGenerator("r")
 
 func clearRegistryId() {
-	registryId.Store(0)
+	nextRegistryId = helper.MakeIdGenerator("r")
 }
 
 // Registry is a registry of object sinks.

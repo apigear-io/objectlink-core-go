@@ -13,6 +13,7 @@ type sourceToNodeEntry struct {
 }
 
 // addNode adds the node to the entry
+// returns an error if the node already exists
 func (e *sourceToNodeEntry) addNode(node *Node) error {
 	e.Lock()
 	defer e.Unlock()
