@@ -184,15 +184,6 @@ func doSendMessage(o io.WriteCloser, c core.MessageConverter, msg core.Message) 
 	return nil
 }
 
-func (n *Node) BroadcastMessage(objectId string, msg core.Message) {
-	n.RLock()
-	registry := n.registry
-	n.RUnlock()
-	for _, node := range registry.GetRemoteNodes(objectId) {
-		node.SendMessage(msg)
-	}
-}
-
 func (n *Node) NotifyPropertyChange(propertyId string, value core.Any) {
 	log.Debug().Msgf("node %s: notify property change: %s", n.id, propertyId)
 	msg := core.MakePropertyChangeMessage(propertyId, value)
