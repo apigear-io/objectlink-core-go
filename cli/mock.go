@@ -1,7 +1,9 @@
 package cli
 
 import (
+	"encoding/json"
 	"fmt"
+	"log"
 
 	"github.com/apigear-io/objectlink-core-go/olink/client"
 	"github.com/apigear-io/objectlink-core-go/olink/core"
@@ -26,7 +28,13 @@ func (s *MockSink) OnPropertyChange(propertyId string, value core.Any) {
 }
 
 func (s *MockSink) OnInit(objectId string, props core.KWArgs, node *client.Node) {
-	fmt.Printf("%s: on init %s %#v\n", s.ObjectId(), objectId, props)
+	data, err := json.MarshalIndent(props, "", "  ")
+	if err != nil {
+		log.Printf("error marshalling value: %v", err)
+		return
+	}
+	fmt.Printf("on init %s\n", objectId)
+	fmt.Println(string(data))
 	if objectId != s.ObjectId() {
 		return
 	}

@@ -17,7 +17,7 @@ var add = Command{
 			return fmt.Errorf("no registry")
 		}
 		if registry.ObjectSink(objectId) == nil {
-			fmt.Printf("register new sink for object %s\n", objectId)
+			fmt.Printf("register sink for %s\n", objectId)
 			sink := &MockSink{objectId: objectId}
 			registry.AddObjectSink(sink)
 		} else {

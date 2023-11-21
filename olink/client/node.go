@@ -132,7 +132,7 @@ func (n *Node) Write(data []byte) (int, error) {
 	case core.MsgError:
 		// report the error
 		msgType, id, err := msg.AsError()
-		log.Info().Msgf("error: %d %d %s", msgType, id, err)
+		log.Info().Msgf("msg error: msgType=%d id-%d err=%s", msgType, id, err)
 	default:
 		return 0, fmt.Errorf("unknown type in client message: %#v", msg)
 	}

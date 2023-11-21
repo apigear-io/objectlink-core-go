@@ -11,12 +11,11 @@ var registry *client.Registry
 var conn *ws.Connection
 var node *client.Node
 var ctx context.Context
-var cancel context.CancelFunc
 var commands []Command
 
 func init() {
 	registry = client.NewRegistry()
-	ctx, cancel = context.WithCancel(context.Background())
+	ctx = context.Background()
 	commands = []Command{
 		add,
 		connect,
@@ -30,5 +29,6 @@ func init() {
 		set,
 		quit,
 		remove,
+		get,
 	}
 }

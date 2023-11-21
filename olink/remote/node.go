@@ -133,12 +133,12 @@ func (n *Node) IncomingPump() {
 				objectId, name := core.SymbolIdToParts(methodId)
 				s := n.registry.GetObjectSource(objectId)
 				if s == nil {
-					log.Debug().Msgf("node: no source for %s", objectId)
+					log.Warn().Msgf("node: no source for %s", objectId)
 					break
 				}
 				result, err := s.Invoke(name, args)
 				if err != nil {
-					log.Debug().Msgf("node: error invoking %s: %v", methodId, err)
+					log.Warn().Msgf("node: error invoking %s: %v", methodId, err)
 					msg := core.MakeErrorMessage(core.MsgInvoke, requestId, err.Error())
 					n.SendMessage(msg)
 					break

@@ -34,7 +34,13 @@ var invoke = Command{
 		}
 		log.Info().Msgf("invoke %s %#v", method, params)
 		node.InvokeRemote(method, params, func(arg client.InvokeReplyArg) {
-			fmt.Printf("%s: %v\n", arg.Identifier, arg.Value)
+			log.Info().Msgf("invoke reply %s", arg.Identifier)
+			data, err := json.MarshalIndent(arg.Value, "", "  ")
+			if err != nil {
+				log.Error().Err(err).Msg("error marshalling value")
+				return
+			}
+			fmt.Println(string(data))
 		})
 		return nil
 	},

@@ -21,7 +21,7 @@ var link = Command{
 			return fmt.Errorf("no client node")
 		}
 		if registry.ObjectSink(objectId) == nil {
-			log.Info().Msgf("register new sink for object %s", objectId)
+			log.Info().Msgf("register sink for %s", objectId)
 			sink := &MockSink{objectId: objectId}
 			err := registry.AddObjectSink(sink)
 			if err != nil {
@@ -29,6 +29,7 @@ var link = Command{
 			}
 		}
 		// we only have one client node
+		log.Info().Msgf("link %s", objectId)
 		node.LinkRemoteNode(objectId)
 		return nil
 
