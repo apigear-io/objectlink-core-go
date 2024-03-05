@@ -3,6 +3,7 @@ package client
 import (
 	"fmt"
 	"io"
+	"sync"
 
 	"github.com/apigear-io/objectlink-core-go/helper"
 	"github.com/apigear-io/objectlink-core-go/log"
@@ -20,6 +21,7 @@ type InvokeReplyArg struct {
 type InvokeReplyFunc func(arg InvokeReplyArg)
 
 type Node struct {
+	mu       sync.RWMutex
 	id       string
 	registry *Registry
 	pending  map[int64]InvokeReplyFunc
@@ -54,6 +56,7 @@ func (n *Node) Close() error {
 	return nil
 }
 
+// SetOutput sets the output for the node.
 func (n *Node) SetOutput(out io.WriteCloser) {
 	n.output = out
 }
@@ -111,14 +114,18 @@ func (n *Node) Write(data []byte) (int, error) {
 		// lookup the pending invoke and call the function
 		requestId, methodId, value := msg.AsInvokeReply()
 		log.Debug().Msgf("invoke reply: %d %s %v", requestId, methodId, value)
+		n.mu.RLock()
 		fn, ok := n.pending[requestId]
+		n.mu.RUnlock()
 		if !ok {
 			return 0, fmt.Errorf("no pending invoke with id %d", requestId)
 		}
 		if fn == nil {
 			return 0, fmt.Errorf("no function for pending invoke with id %d", requestId)
 		}
+		n.mu.Lock()
 		delete(n.pending, requestId)
+		n.mu.Unlock()
 		fn(InvokeReplyArg{methodId, value})
 	case core.MsgSignal:
 		// get the sink and call the on signal method
@@ -142,9 +149,20 @@ func (n *Node) Write(data []byte) (int, error) {
 func (n *Node) InvokeRemote(methodId string, args core.Args, f InvokeReplyFunc) {
 	n.seqId++
 	if f != nil {
+		n.mu.Lock()
 		n.pending[n.seqId] = f
+		n.mu.Unlock()
 	}
 	n.SendMessage(core.MakeInvokeMessage(n.seqId, methodId, args))
+}
+
+func (n *Node) InvokeRemoteSync(methodId string, args core.Args) (core.Any, error) {
+	ch := make(chan InvokeReplyArg, 1)
+	n.InvokeRemote(methodId, args, func(arg InvokeReplyArg) {
+		ch <- arg
+	})
+	arg := <-ch
+	return arg.Value, nil
 }
 
 func (n *Node) SetRemoteProperty(propertyId string, value core.Any) {
