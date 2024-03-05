@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 	"sync"
+	"sync/atomic"
 
 	"github.com/apigear-io/objectlink-core-go/helper"
 	"github.com/apigear-io/objectlink-core-go/log"
@@ -25,7 +26,7 @@ type Node struct {
 	id       string
 	registry *Registry
 	pending  map[int64]InvokeReplyFunc
-	seqId    int64
+	seqId    atomic.Int64
 	conv     core.MessageConverter
 	output   io.WriteCloser
 }
@@ -35,7 +36,6 @@ func NewNode(registry *Registry) *Node {
 		id:       nextNodeId(),
 		registry: registry,
 		pending:  make(map[int64]InvokeReplyFunc),
-		seqId:    0,
 		conv: core.MessageConverter{
 			Format: core.FormatJson,
 		},
@@ -46,7 +46,7 @@ func (n *Node) Id() string {
 	return n.id
 }
 
-func (n Node) Registry() *Registry {
+func (n *Node) Registry() *Registry {
 	return n.registry
 }
 
@@ -147,13 +147,13 @@ func (n *Node) Write(data []byte) (int, error) {
 }
 
 func (n *Node) InvokeRemote(methodId string, args core.Args, f InvokeReplyFunc) {
-	n.seqId++
+	seqId := n.seqId.Add(1)
+	n.mu.Lock()
 	if f != nil {
-		n.mu.Lock()
-		n.pending[n.seqId] = f
-		n.mu.Unlock()
+		n.pending[seqId] = f
 	}
-	n.SendMessage(core.MakeInvokeMessage(n.seqId, methodId, args))
+	n.mu.Unlock()
+	n.SendMessage(core.MakeInvokeMessage(seqId, methodId, args))
 }
 
 func (n *Node) InvokeRemoteSync(methodId string, args core.Args) (core.Any, error) {
