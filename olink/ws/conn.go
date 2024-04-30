@@ -16,8 +16,8 @@ import (
 
 const (
 
-	// max message size in bytes
-	maxMessageSize = 512
+	// max message size in bytes (1MB)
+	maxMessageSize = 1024 * 1024 // 1MB
 	// Time allowed to read the next pong message from the peer.
 	pongWait = 60 * time.Second
 	// Send pings to peer with this period. Must be less than pongWait.
