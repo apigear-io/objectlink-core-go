@@ -1,13 +1,13 @@
 package cli
 
 import (
-	"encoding/json"
 	"fmt"
 	"strings"
 
 	"github.com/apigear-io/objectlink-core-go/log"
 	"github.com/apigear-io/objectlink-core-go/olink/client"
 	"github.com/apigear-io/objectlink-core-go/olink/core"
+	"gopkg.in/yaml.v3"
 )
 
 var invoke = Command{
@@ -27,7 +27,7 @@ var invoke = Command{
 		var params core.Args
 		if len(args) > 2 {
 			r := strings.NewReader(strings.Join(args[2:], " "))
-			err := json.NewDecoder(r).Decode(&params)
+			err := yaml.NewDecoder(r).Decode(&params)
 			if err != nil {
 				return err
 			}
