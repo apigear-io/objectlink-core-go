@@ -14,6 +14,23 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+type Middleware interface {
+	Process(msg []byte) ([]byte, error)
+}
+
+type MiddlewareFunc func(msg []byte) ([]byte, error)
+
+func (f MiddlewareFunc) Process(msg []byte) ([]byte, error) {
+	return f(msg)
+}
+
+type LogMiddleware struct{}
+
+func (l LogMiddleware) Process(msg []byte) ([]byte, error) {
+	log.Debug().Msgf("msg: %s", string(msg))
+	return msg, nil
+}
+
 const (
 
 	// max message size in bytes (1MB)
@@ -52,6 +69,7 @@ type Connection struct {
 	ctxCancel     context.CancelFunc
 	out           io.WriteCloser
 	closeHandlers []func()
+	middlewares   []Middleware
 }
 
 func NewConnection(ctx context.Context, socket *websocket.Conn) *Connection {
@@ -76,6 +94,12 @@ func NewConnection(ctx context.Context, socket *websocket.Conn) *Connection {
 	go p.WritePump()
 	go p.ReadPump()
 	return p
+}
+
+func (c *Connection) Use(m Middleware) {
+	c.Lock()
+	defer c.Unlock()
+	c.middlewares = append(c.middlewares, m)
 }
 
 func (c *Connection) OnClosing(onClosing func()) {
@@ -127,9 +151,11 @@ func (c *Connection) WritePump() {
 		select {
 		case <-c.ctx.Done():
 			log.Info().Msgf("%s: closing", c.id)
+			c.RLock()
 			if c.out != nil {
 				c.out.Close()
 			}
+			c.RUnlock()
 			c.socket.Close()
 			c.EmitClosing()
 			return
@@ -139,6 +165,17 @@ func (c *Connection) WritePump() {
 				log.Error().Msgf("%s: write ping error: %v", c.id, err)
 			}
 		case bytes := <-c.in:
+			c.RLock()
+			for _, m := range c.middlewares {
+				data, err := m.Process(bytes)
+				if err != nil {
+					c.RUnlock()
+					log.Error().Msgf("%s: middleware error: %v", c.id, err)
+					return
+				}
+				bytes = data
+			}
+			c.RUnlock()
 			log.Debug().Msgf("%s: write: %s", c.id, string(bytes))
 			err := c.socket.SetWriteDeadline(time.Now().Add(sendWait))
 			if err != nil {
@@ -175,6 +212,17 @@ func (c *Connection) ReadPump() {
 				log.Debug().Msgf("%s: no output", c.id)
 				continue
 			}
+			c.RLock()
+			for _, m := range c.middlewares {
+				data, err := m.Process(bytes)
+				if err != nil {
+					c.RUnlock()
+					log.Error().Msgf("%s: middleware error: %v", c.id, err)
+					return
+				}
+				bytes = data
+			}
+			c.RUnlock()
 			_, err = out.Write(bytes)
 			if err != nil {
 				log.Debug().Msgf("%s: write error: %v", c.id, err)

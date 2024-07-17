@@ -52,7 +52,7 @@ func (r *remoteEntries) addSource(source IObjectSource) error {
 	if source == nil {
 		return fmt.Errorf("source is nil")
 	}
-	log.Info().Msgf("registry: add %s", source.ObjectId())
+	log.Info().Str("source", source.ObjectId()).Msg("registry: add")
 	e := r.getEntry(source.ObjectId())
 	if e.hasSource() {
 		return fmt.Errorf("source %s is already registered", source.ObjectId())

@@ -146,6 +146,15 @@ func (n *Node) IncomingPump() {
 				log.Debug().Msgf("node: invoke result: %v", result)
 				msg := core.MakeInvokeReplyMessage(requestId, methodId, result)
 				n.SendMessage(msg)
+			case core.MsgSignal:
+				// send the signal to all nodes
+				signalId, args := msg.AsSignal()
+				if n.registry != nil {
+					objectId, name := core.SymbolIdToParts(signalId)
+					n.registry.NotifySignal(objectId, name, args)
+				} else {
+					n.SendSignal(signalId, args)
+				}
 			default:
 				log.Info().Msgf("node: unknown message type: %v", msg.Type())
 			}
@@ -186,12 +195,32 @@ func doSendMessage(o io.WriteCloser, c core.MessageConverter, msg core.Message) 
 
 func (n *Node) NotifyPropertyChange(propertyId string, value core.Any) {
 	log.Debug().Msgf("node %s: notify property change: %s", n.id, propertyId)
+	if n.registry != nil {
+		objectId, name := core.SymbolIdToParts(propertyId)
+		n.registry.NotifyPropertyChange(objectId, core.KWArgs{name: value})
+	} else {
+		n.SendPropertyChange(propertyId, value)
+	}
+}
+
+func (n *Node) SendPropertyChange(propertyId string, value core.Any) {
+	log.Debug().Msgf("node %s: send property change: %s", n.id, propertyId)
 	msg := core.MakePropertyChangeMessage(propertyId, value)
 	n.SendMessage(msg)
 }
 
 func (n *Node) NotifySignal(signalId string, args core.Args) {
 	log.Debug().Msgf("node %s: notify signal: %s", n.id, signalId)
+	objectId, name := core.SymbolIdToParts(signalId)
+	if n.registry != nil {
+		n.registry.NotifySignal(objectId, name, args)
+	} else {
+		n.SendSignal(signalId, args)
+	}
+}
+
+func (n *Node) SendSignal(signalId string, args core.Args) {
+	log.Debug().Msgf("node %s: send signal: %s", n.id, signalId)
 	msg := core.MakeSignalMessage(signalId, args)
 	n.SendMessage(msg)
 }

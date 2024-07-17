@@ -96,7 +96,7 @@ func (r *Registry) NotifyPropertyChange(objectId string, kwargs core.KWArgs) {
 	for _, n := range nodes {
 		for name, value := range kwargs {
 			propertyId := core.MakeSymbolId(objectId, name)
-			n.NotifyPropertyChange(propertyId, value)
+			n.SendPropertyChange(propertyId, value)
 		}
 	}
 }
@@ -107,6 +107,6 @@ func (r *Registry) NotifySignal(objectId string, name string, args core.Args) {
 	signalId := core.MakeSymbolId(objectId, name)
 	nodes := r.entries.getNodes(objectId)
 	for _, n := range nodes {
-		n.NotifySignal(signalId, args)
+		n.SendSignal(signalId, args)
 	}
 }
