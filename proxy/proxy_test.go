@@ -165,20 +165,20 @@ func (s *DemoSink) Reset() {
 	})
 }
 
-func (s *DemoSink) OnSignal(signalId string, args core.Args) {
+func (s *DemoSink) HandleSignal(signalId string, args core.Args) {
 	log.Info().Msgf("OnSignal: %s", signalId)
 	s.signals[signalId] = args
 }
-func (s *DemoSink) OnPropertyChange(propertyId string, value core.Any) {
+func (s *DemoSink) HandlePropertyChange(propertyId string, value core.Any) {
 	log.Info().Msgf("OnPropertyChange: %s", propertyId)
 	s.properties[propertyId] = value
 }
-func (s *DemoSink) OnInit(objectId string, props core.KWArgs, node *client.Node) {
+func (s *DemoSink) HandleInit(objectId string, props core.KWArgs, node *client.Node) {
 	log.Info().Msgf("OnInit: %s", objectId)
 	s.properties = props
 	s.node = node
 }
-func (s *DemoSink) OnRelease() {
+func (s *DemoSink) HandleRelease() {
 	log.Info().Msgf("OnRelease")
 	s.node = nil
 }

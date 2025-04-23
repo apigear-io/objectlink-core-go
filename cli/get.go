@@ -9,7 +9,7 @@ import (
 	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
-var get = Command{
+var cmdGet = Command{
 	Usage: "get <objectId>",
 	Names: []string{"g", "get"},
 	Exec: func(args []string) error {

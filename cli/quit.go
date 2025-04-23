@@ -5,7 +5,7 @@ import (
 	"io"
 )
 
-var quit = Command{
+var cmdQuit = Command{
 	Usage: "quit",
 	Names: []string{"q", "quit"},
 	Exec: func(args []string) error {

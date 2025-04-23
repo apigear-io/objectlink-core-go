@@ -11,7 +11,7 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-var invoke = Command{
+var cmdInvoke = Command{
 	Usage: "invoke <methodId> [<arg>]",
 	Names: []string{"i", "inv", "invoke"},
 	Exec: func(args []string) error {

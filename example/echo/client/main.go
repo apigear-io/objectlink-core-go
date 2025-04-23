@@ -80,7 +80,7 @@ func (s *CounterSink) Decrement(step int64) {
 	s.node.InvokeRemote(methodId, core.Args{step}, nil)
 }
 
-func (s *CounterSink) OnInit(objectId string, props core.KWArgs, node *client.Node) {
+func (s *CounterSink) HandleInit(objectId string, props core.KWArgs, node *client.Node) {
 	fmt.Printf("sink: on init: %s %v\n", objectId, props)
 	if objectId == s.ObjectId() {
 		s.node = node
@@ -90,7 +90,7 @@ func (s *CounterSink) OnInit(objectId string, props core.KWArgs, node *client.No
 	}
 }
 
-func (s *CounterSink) OnPropertyChange(propertyId string, value core.Any) {
+func (s *CounterSink) HandlePropertyChange(propertyId string, value core.Any) {
 	fmt.Printf("on property change: %s %v\n", propertyId, value)
 	name := core.SymbolIdToMember(propertyId)
 	switch name {
@@ -101,14 +101,14 @@ func (s *CounterSink) OnPropertyChange(propertyId string, value core.Any) {
 	}
 }
 
-func (s *CounterSink) OnRelease() {
+func (s *CounterSink) HandleRelease() {
 	fmt.Printf("on release: %s\n", s.ObjectId())
 	if s.node != nil {
 		s.node = nil
 	}
 }
 
-func (s *CounterSink) OnSignal(signalId string, args core.Args) {
+func (s *CounterSink) HandleSignal(signalId string, args core.Args) {
 	fmt.Printf("on signal: %s %v\n", signalId, args)
 }
 

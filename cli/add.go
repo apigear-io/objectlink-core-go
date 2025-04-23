@@ -4,7 +4,7 @@ import (
 	"fmt"
 )
 
-var add = Command{
+var cmdAdd = Command{
 	Usage: "add <objectid>",
 	Names: []string{"add", "a"},
 	Exec: func(args []string) error {

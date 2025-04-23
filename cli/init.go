@@ -17,18 +17,19 @@ func init() {
 	registry = client.NewRegistry()
 	ctx = context.Background()
 	commands = []Command{
-		add,
-		connect,
-		disconnect,
-		help,
-		info,
-		invoke,
-		signal,
-		link,
-		unlink,
-		set,
-		quit,
-		remove,
-		get,
+		cmdAdd,
+		cmdConnect,
+		cmdDisconnect,
+		cmdHelp,
+		cmdInfo,
+		cmdInvoke,
+		cmdSignal,
+		cmdLink,
+		cmdUnlink,
+		cmdSet,
+		cmdQuit,
+		cmdRemove,
+		cmdGet,
+		cmdServe,
 	}
 }

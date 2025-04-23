@@ -28,24 +28,24 @@ func (s *MetaSink) ObjectId() string {
 	return s.id
 }
 
-func (s *MetaSink) OnSignal(signalId string, args core.Args) {
+func (s *MetaSink) HandleSignal(signalId string, args core.Args) {
 	if s.Signal != nil {
 		s.Signal(signalId, args)
 	}
 }
-func (s *MetaSink) OnPropertyChange(propertyId string, value core.Any) {
+func (s *MetaSink) HandlePropertyChange(propertyId string, value core.Any) {
 	name := core.SymbolIdToMember(propertyId)
 	s.Properties[name] = value
 	if s.Change != nil {
 		s.Change(name, value)
 	}
 }
-func (s *MetaSink) OnInit(objectId string, props core.KWArgs, node *client.Node) {
+func (s *MetaSink) HandleInit(objectId string, props core.KWArgs, node *client.Node) {
 	s.Properties = props
 	s.node = node
 
 }
-func (s *MetaSink) OnRelease() {
+func (s *MetaSink) HandleRelease() {
 	s.node = nil
 }
 

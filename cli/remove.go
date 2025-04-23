@@ -2,7 +2,7 @@ package cli
 
 import "fmt"
 
-var remove = Command{
+var cmdRemove = Command{
 	Usage: "remove <objectId>",
 	Names: []string{"r", "remove"},
 	Exec: func(args []string) error {

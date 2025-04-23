@@ -6,8 +6,8 @@ import (
 
 type IObjectSink interface {
 	ObjectId() string
-	OnSignal(signalId string, args core.Args)
-	OnPropertyChange(propertyId string, value core.Any)
-	OnInit(objectId string, props core.KWArgs, node *Node)
-	OnRelease()
+	HandleSignal(signalId string, args core.Args)
+	HandlePropertyChange(propertyId string, value core.Any)
+	HandleInit(objectId string, props core.KWArgs, node *Node)
+	HandleRelease()
 }

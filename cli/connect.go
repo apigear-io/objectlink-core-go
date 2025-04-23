@@ -7,11 +7,11 @@ import (
 	"github.com/apigear-io/objectlink-core-go/olink/ws"
 )
 
-var connect = Command{
+var cmdConnect = Command{
 	Usage: "connect <url>",
 	Names: []string{"c", "con", "connect"},
 	Exec: func(args []string) error {
-		url := "ws://localhost:4333/ws"
+		url := "ws://localhost:5555/ws"
 		if registry == nil {
 			return fmt.Errorf("no registry")
 		}

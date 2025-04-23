@@ -99,7 +99,7 @@ func (n *Node) Write(data []byte) (int, error) {
 		if sink == nil {
 			return 0, fmt.Errorf("no sink for %s", objectId)
 		}
-		sink.OnInit(objectId, props, n)
+		sink.HandleInit(objectId, props, n)
 		return 0, nil
 	case core.MsgPropertyChange:
 		// get the sink and call the on property change method
@@ -109,7 +109,7 @@ func (n *Node) Write(data []byte) (int, error) {
 		if sink == nil {
 			return 0, fmt.Errorf("no sink for %s", propertyId)
 		}
-		sink.OnPropertyChange(propertyId, value)
+		sink.HandlePropertyChange(propertyId, value)
 	case core.MsgInvokeReply:
 		// lookup the pending invoke and call the function
 		requestId, methodId, value := msg.AsInvokeReply()
@@ -135,7 +135,7 @@ func (n *Node) Write(data []byte) (int, error) {
 		if sink == nil {
 			return 0, fmt.Errorf("no sink for %s", signalId)
 		}
-		sink.OnSignal(signalId, args)
+		sink.HandleSignal(signalId, args)
 	case core.MsgError:
 		// report the error
 		msgType, id, err := msg.AsError()

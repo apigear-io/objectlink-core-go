@@ -10,7 +10,7 @@ import (
 	"github.com/apigear-io/objectlink-core-go/olink/core"
 )
 
-var signal = Command{
+var cmdSignal = Command{
 	Usage: "signal <signalId> [<arg>]",
 	Names: []string{"sig", "signal"},
 	Exec: func(args []string) error {

@@ -38,7 +38,7 @@ func (c *MessageConverter) FromData(data []byte) (Message, error) {
 	case FormatJson:
 		var msg Message
 		decoder := json.NewDecoder(bytes.NewReader(data))
-		decoder.UseNumber()
+		// decoder.UseNumber()
 		err := decoder.Decode(&msg)
 		return msg, err
 	}

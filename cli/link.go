@@ -6,7 +6,7 @@ import (
 	"github.com/apigear-io/objectlink-core-go/log"
 )
 
-var link = Command{
+var cmdLink = Command{
 	Usage: "link <objectid>",
 	Names: []string{"l", "lnk", "link"},
 	Exec: func(args []string) error {

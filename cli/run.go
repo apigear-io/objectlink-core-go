@@ -21,6 +21,7 @@ var completer = readline.NewPrefixCompleter(
 	readline.PcItem("unlink"),
 	readline.PcItem("quit"),
 	readline.PcItem("notify"),
+	readline.PcItem("serve"),
 )
 
 func Run() {

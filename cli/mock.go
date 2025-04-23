@@ -19,15 +19,15 @@ func (s *MockSink) ObjectId() string {
 	return s.objectId
 }
 
-func (s *MockSink) OnSignal(signalId string, args core.Args) {
+func (s *MockSink) HandleSignal(signalId string, args core.Args) {
 	fmt.Printf("%s: signal: %s %v\n", s.ObjectId(), signalId, args)
 }
 
-func (s *MockSink) OnPropertyChange(propertyId string, value core.Any) {
+func (s *MockSink) HandlePropertyChange(propertyId string, value core.Any) {
 	fmt.Printf("%s: property change: %s %v\n", s.ObjectId(), propertyId, value)
 }
 
-func (s *MockSink) OnInit(objectId string, props core.KWArgs, node *client.Node) {
+func (s *MockSink) HandleInit(objectId string, props core.KWArgs, node *client.Node) {
 	data, err := json.MarshalIndent(props, "", "  ")
 	if err != nil {
 		log.Printf("error marshalling value: %v", err)
@@ -42,7 +42,7 @@ func (s *MockSink) OnInit(objectId string, props core.KWArgs, node *client.Node)
 	s.node = node
 }
 
-func (s *MockSink) OnRelease() {
+func (s *MockSink) HandleRelease() {
 	fmt.Printf("%s: on release\n", s.ObjectId())
 	s.node = nil
 }

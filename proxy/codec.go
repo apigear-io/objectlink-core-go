@@ -28,6 +28,6 @@ func (c *JsonCodec) Encode(v interface{}) ([]byte, error) {
 
 func (c *JsonCodec) Decode(data []byte, v interface{}) error {
 	decoder := json.NewDecoder(bytes.NewReader(data))
-	decoder.UseNumber()
+	// decoder.UseNumber()
 	return decoder.Decode(&v)
 }

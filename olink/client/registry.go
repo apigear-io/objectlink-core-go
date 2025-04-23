@@ -91,7 +91,7 @@ func (r *Registry) RemoveObjectSink(objectId string) {
 	s := r.entries.getSink(objectId)
 
 	if s != nil {
-		s.OnRelease()
+		s.HandleRelease()
 	} else {
 		log.Warn().Msgf("object sink %s not found", objectId)
 	}

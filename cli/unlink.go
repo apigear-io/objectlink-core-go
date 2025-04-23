@@ -2,7 +2,7 @@ package cli
 
 import "fmt"
 
-var unlink = Command{
+var cmdUnlink = Command{
 	Usage: "unlink <objectId>",
 	Names: []string{"u", "ulnk", "unlink"},
 	Exec: func(args []string) error {

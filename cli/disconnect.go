@@ -2,7 +2,7 @@ package cli
 
 import "fmt"
 
-var disconnect = Command{
+var cmdDisconnect = Command{
 	Usage: "disconnect",
 	Names: []string{"d", "disconnect"},
 	Exec: func(args []string) error {

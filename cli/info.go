@@ -2,7 +2,7 @@ package cli
 
 import "fmt"
 
-var info = Command{
+var cmdInfo = Command{
 	Usage: "info",
 	Names: []string{"info"},
 	Exec: func(args []string) error {

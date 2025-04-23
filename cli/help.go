@@ -5,7 +5,7 @@ import (
 	"strings"
 )
 
-var help = Command{
+var cmdHelp = Command{
 	Usage: "help",
 	Names: []string{"h", "help", "?"},
 	Exec: func(args []string) error {

@@ -15,18 +15,18 @@ func (s *CounterSink) ObjectId() string {
 	return "demo.Counter"
 }
 
-func (s *CounterSink) OnSignal(signalId string, args core.Args) {
+func (s *CounterSink) HandleSignal(signalId string, args core.Args) {
 	s.events = append(s.events, core.MakeSignalMessage(signalId, args))
 }
 
-func (s *CounterSink) OnPropertyChange(propertyId string, value core.Any) {
+func (s *CounterSink) HandlePropertyChange(propertyId string, value core.Any) {
 	s.events = append(s.events, core.MakePropertyChangeMessage(propertyId, value))
 	if core.SymbolIdToMember(propertyId) == "count" {
 		s.Count = value.(int)
 	}
 }
 
-func (s *CounterSink) OnInit(objectId string, props core.KWArgs, node *Node) {
+func (s *CounterSink) HandleInit(objectId string, props core.KWArgs, node *Node) {
 	s.events = append(s.events, core.MakeInitMessage(objectId, props))
 	_, ok := props["count"]
 	if ok {
@@ -34,7 +34,7 @@ func (s *CounterSink) OnInit(objectId string, props core.KWArgs, node *Node) {
 	}
 }
 
-func (s *CounterSink) OnRelease() {}
+func (s *CounterSink) HandleRelease() {}
 
 func TestCounterSink(t *testing.T) {
 	sink := &CounterSink{}

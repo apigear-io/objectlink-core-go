@@ -2,7 +2,7 @@ package cli
 
 import "fmt"
 
-var set = Command{
+var cmdSet = Command{
 	Usage: "set <propertyId> <value>",
 	Names: []string{"s", "set"},
 	Exec: func(args []string) error {

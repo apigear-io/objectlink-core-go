@@ -26,9 +26,11 @@ type Node struct {
 }
 
 func NewNode(registry *Registry) *Node {
+	nodeId := nextNodeId()
+	log.Debug().Msgf("node %s: creating", nodeId)
 	ctx, cancel := context.WithCancel(context.Background())
 	n := &Node{
-		id:       nextNodeId(),
+		id:       nodeId,
 		registry: registry,
 		conv: core.MessageConverter{
 			Format: core.FormatJson,
