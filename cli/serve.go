@@ -116,7 +116,7 @@ func RunHub(addr string) {
 }
 
 var cmdServe = Command{
-	Usage: "serve",
+	Usage: "serve <addr>",
 	Names: []string{"s", "serve"},
 	Exec: func(args []string) error {
 		addr := "localhost:5555"
@@ -126,5 +126,5 @@ var cmdServe = Command{
 		RunHub(addr)
 		return nil
 	},
-	Help: "serve command not implemented",
+	Help: "start an objectlink server",
 }
