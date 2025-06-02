@@ -9,10 +9,6 @@ import (
 
 var nextRegistryId = helper.MakeIdGenerator("r")
 
-func clearRegistryId() {
-	nextRegistryId = helper.MakeIdGenerator("r")
-}
-
 // Registry is the registry of remote objects.
 // It is optimized for the retrieval of object sources
 // A object source is registered in the registry and can be retrieved by the object id.

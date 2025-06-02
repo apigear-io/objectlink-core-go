@@ -12,10 +12,6 @@ type SinkFactory func(objectId string) IObjectSink
 
 var nextRegistryId = helper.MakeIdGenerator("r")
 
-func clearRegistryId() {
-	nextRegistryId = helper.MakeIdGenerator("r")
-}
-
 // Registry is a registry of object sinks.
 // It is used to keep track of object sinks and their associated client nodes.
 // It is optimized for the retrieval of object sinks by object id.

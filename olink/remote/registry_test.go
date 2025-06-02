@@ -3,12 +3,13 @@ package remote
 import (
 	"testing"
 
+	"github.com/apigear-io/objectlink-core-go/helper"
 	"github.com/apigear-io/objectlink-core-go/olink/core"
 	"github.com/stretchr/testify/require"
 )
 
 func TestNextRegistryId(t *testing.T) {
-	clearRegistryId()
+	nextRegistryId := helper.MakeIdGenerator("r")
 	id := nextRegistryId()
 	require.Equal(t, "r1", id)
 	id = nextRegistryId()

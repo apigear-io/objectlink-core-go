@@ -3,12 +3,13 @@ package client
 import (
 	"testing"
 
+	"github.com/apigear-io/objectlink-core-go/helper"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestNextRegistryId(t *testing.T) {
 	t.Parallel()
-	clearRegistryId()
+	nextRegistryId := helper.MakeIdGenerator("r")
 	id := nextRegistryId()
 	assert.Equal(t, "r1", id)
 	id = nextRegistryId()
