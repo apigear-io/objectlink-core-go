@@ -34,6 +34,7 @@ func (r *Registry) Id() string {
 
 // SetSourceFactory sets the source factory.
 func (r *Registry) SetSourceFactory(factory SourceFactory) {
+	log.Debug().Msgf("set remote source factory %T", factory)
 	r.entries.setFactory(factory)
 }
 

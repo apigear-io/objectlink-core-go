@@ -39,7 +39,7 @@ func (r *Registry) Id() string {
 
 // SetSinkFactory sets the sink factory.
 func (r *Registry) SetSinkFactory(factory SinkFactory) {
-	log.Debug().Msg("set sink factory")
+	log.Debug().Msgf("set client sink factory %T", factory)
 	r.entries.setFactory(factory)
 }
 
